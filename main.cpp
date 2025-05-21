@@ -67,6 +67,11 @@ int main() {
     loadimage(&sun_back, _T("img/sun_back.png"));
     loadimage(&tombstone, _T("img/tombstone.png"), 150, 150);
 
+    // 初始化僵尸生成器和容器
+    POINT tombstone_pos = { 1000, 50 };  // 墓碑位置
+    ZombieSpawner spawner(tombstone_pos);
+    std::vector<Zombie*> zombies;
+
     BeginBatchDraw();
 
     // 大脑放置阶段
@@ -231,6 +236,30 @@ int main() {
         if (player_position.x > 1280 - 80) player_position.x = 1280 - 70; // 假设角色宽度为80
         if (player_position.y > 720 - 80) player_position.y = 720 - 80;   // 假设角色高度为80
 
+        // 更新僵尸生成器
+        if (Zombie* new_zombie = spawner.Update(1000 / 144)) {
+            zombies.push_back(new_zombie);
+        }
+
+        // 更新所有僵尸
+        for (auto zombie : zombies) {
+            zombie->Update(1000 / 144, plants, brain);
+        }
+
+        // 删除死亡的僵尸
+        zombies.erase(
+            std::remove_if(zombies.begin(), zombies.end(),
+                [](Zombie* zombie) {
+                    if (!zombie->IsAlive()) {
+                        delete zombie;
+                        return true;
+                    }
+                    return false;
+                }
+            ),
+            zombies.end()
+        );
+
         // 绘制游戏画面
         cleardevice();
         
@@ -250,6 +279,11 @@ int main() {
             plant->Draw();
         }
 
+        // 绘制僵尸
+        for (auto zombie : zombies) {
+            zombie->Draw();
+        }
+
         // 绘制阳光数量
         setfillcolor(RGB(255, 215, 0));
         settextcolor(RGB(0, 0, 0));
@@ -262,6 +296,11 @@ int main() {
         TCHAR hp_text[20];
         _stprintf_s(hp_text, _T("大脑血量: %d"), brain->GetHP());
         outtextxy(10, 50, hp_text);
+
+        // 绘制僵尸数量（调试用）
+        TCHAR zombie_text[20];
+        _stprintf_s(zombie_text, _T("僵尸数量: %d"), (int)zombies.size());
+        outtextxy(10, 90, zombie_text);
 
         // 绘制玩家角色
         if (moving_left || moving_right || moving_up || moving_down) {
@@ -298,6 +337,11 @@ int main() {
     }
 
     // 清理资源
+    for (auto zombie : zombies) {
+        delete zombie;
+    }
+    zombies.clear();
+
     for (auto plant : plants) {
         delete plant;
     }
