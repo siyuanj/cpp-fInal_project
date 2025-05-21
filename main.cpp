@@ -4,6 +4,7 @@
 #include<windows.h>
 #include<vector>
 #include<cmath>
+// why nothing happen??
 
 // Á´½ÓÍ¼Ïñ´¦Àí¿â
 #pragma comment(lib, "MSIMG32.LIB")
