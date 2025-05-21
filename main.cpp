@@ -42,33 +42,73 @@ int main() {
     Animation* anim_player_right = new Animation(atlas_player_right, 45);
 
     bool running = true; // 游戏运行标志
-    ExMessage msg; // 消息结构体 方便之后处理消息
+    bool game_started = false; // 游戏是否已经开始（是否已放置大脑）
+    ExMessage msg; // 消息结构体
 
-    IMAGE img_background; // 背景图片类
-    IMAGE test_img; // 测试图片类
-    IMAGE sun_back; // 测试图片类
-    IMAGE tombstone; // 墓碑图片类
+    IMAGE img_background;
+    IMAGE sun_back;
+    IMAGE tombstone;
+
+    // 创建大脑基地
+    BrainBase* brain = new BrainBase();
 
     // 植物管理
-    int selected_plant = 0; // 当前选中的植物类型（0表示未选中）
-    std::vector<Plant*> plants; // 存储所有放置的植物
+    int selected_plant = 0;
+    std::vector<Plant*> plants;
 
     // 初始化移动控制变量
-    bool facing_left = true; // 角色朝向，true为左，false为右
+    bool facing_left = true;
     bool moving_up = false;
     bool moving_down = false;
     bool moving_left = false;
     bool moving_right = false;
 
-    loadimage(&img_background, _T("img/background.png")); // 加载背景图片
-    //loadimage(&test_img, _T("img/SunFlower1.gif"));// 加载测试图片
-    loadimage(&sun_back, _T("img/sun_back.png")); // 加载阳光栏
-    loadimage(&tombstone, _T("img/tombstone.png"), 150, 150); // 加载墓碑 宽度：150 高度：150
+    loadimage(&img_background, _T("img/background.png"));
+    loadimage(&sun_back, _T("img/sun_back.png"));
+    loadimage(&tombstone, _T("img/tombstone.png"), 150, 150);
 
+    BeginBatchDraw();
 
-    BeginBatchDraw(); // 开启批量绘图
+    // 大脑放置阶段
+    settextcolor(WHITE);
+    settextstyle(40, 0, _T("Arial"));
+    outtextxy(400, 300, _T("点击屏幕放置大脑基地"));
+    FlushBatchDraw();
+
+    // 等待玩家放置大脑
+    while (!game_started && running) {
+        if (peekmessage(&msg)) {
+            if (msg.message == WM_LBUTTONDOWN) {
+                POINT click_pos = { msg.x, msg.y };
+                // 确保大脑不会被放置在屏幕边缘
+                if (click_pos.x > 100 && click_pos.x < 1180 && 
+                    click_pos.y > 100 && click_pos.y < 620) {
+                    brain->SetPosition(click_pos);
+                    game_started = true;
+                }
+            }
+            else if (msg.message == WM_KEYDOWN && msg.vkcode == VK_ESCAPE) {
+                running = false;
+            }
+        }
+    }
+
+    // 主游戏循环
     while (running) {
-        DWORD startTime = GetTickCount(); // 节省时间部分
+        DWORD startTime = GetTickCount();
+
+        // 检查游戏是否失败
+        if (!brain->IsAlive()) {
+            // 显示游戏结束画面
+            cleardevice();
+            settextcolor(RED);
+            settextstyle(60, 0, _T("Arial"));
+            outtextxy(480, 300, _T("游戏结束!"));
+            FlushBatchDraw();
+            Sleep(2000); // 显示2秒
+            running = false;
+            continue;
+        }
 
         while (peekmessage(&msg)) {
             // 按键处理部分
@@ -191,35 +231,40 @@ int main() {
         if (player_position.x > 1280 - 80) player_position.x = 1280 - 70; // 假设角色宽度为80
         if (player_position.y > 720 - 80) player_position.y = 720 - 80;   // 假设角色高度为80
 
-        // 更新所有植物
-
-        cleardevice(); // 清空屏幕，然后绘制新帧
-//*****************************下方为要绘制上去的内容********************************//
-
+        // 绘制游戏画面
+        cleardevice();
+        
         DWORD delta = 1000 / 144;
-        for (auto plant : plants) {
-            plant->Update(delta);
-        }
-        putimage(0, 0, &img_background); //放置背景图片于（0，0）
-        //putimage_alpha(0, 0, &test_img);//放置测试图片于（0，0）
+        
+        // 绘制背景和UI
+        putimage(0, 0, &img_background);
         putimage_alpha(0, 0, &sun_back);
         putimage_alpha(1000, 50, &tombstone);
-        // 绘制所有植物
+
+        // 更新和绘制大脑
+        brain->Draw();
+
+        // 更新和绘制植物
         for (auto plant : plants) {
+            plant->Update(delta);
             plant->Draw();
         }
 
         // 绘制阳光数量
-        setfillcolor(RGB(255, 215, 0)); // 设置数字颜色为金色
-        settextcolor(RGB(0, 0, 0));     // 设置文字颜色为黑色
+        setfillcolor(RGB(255, 215, 0));
+        settextcolor(RGB(0, 0, 0));
         TCHAR sun_text[20];
         _stprintf_s(sun_text, _T("%d"), sun_count);
-        RECT text_rect = { 68, 2, 120, 32 }; // 定义文本显示区域
-        drawtext(sun_text, &text_rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE); // 居中对齐显示
+        RECT text_rect = { 68, 2, 120, 32 };
+        drawtext(sun_text, &text_rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
-        // 使用Animation类显示角色动画
+        // 绘制大脑血量
+        TCHAR hp_text[20];
+        _stprintf_s(hp_text, _T("大脑血量: %d"), brain->GetHP());
+        outtextxy(10, 50, hp_text);
+
+        // 绘制玩家角色
         if (moving_left || moving_right || moving_up || moving_down) {
-            //******************只在移动时更新动画****************//
             if (facing_left) {
                 anim_player_left->showimage(player_position.x, player_position.y, delta);
             }
@@ -228,7 +273,6 @@ int main() {
             }
         }
         else {
-            // 静止时显示第一帧
             if (facing_left) {
                 putimage_alpha(player_position.x, player_position.y, atlas_player_left->frame_list[0]);
             }
@@ -237,14 +281,13 @@ int main() {
             }
         }
 
-        // 如果有植物被选中，显示当前选中的植物类型
         if (selected_plant > 0) {
             TCHAR s[20];
             _stprintf_s(s, _T("Selected: %d"), selected_plant);
             outtextxy(10, 10, s);
         }
 
-        FlushBatchDraw(); // 刷新屏幕，显示新绘制的内容
+        FlushBatchDraw();
 
         // 控制帧率
         DWORD endTime = GetTickCount();
@@ -260,12 +303,12 @@ int main() {
     }
     plants.clear();
 
+    delete brain;
     delete anim_player_left;
     delete anim_player_right;
     delete atlas_player_left;
     delete atlas_player_right;
 
-
-    closegraph(); // 关闭图形窗口
+    closegraph();
     return 0;
 }
