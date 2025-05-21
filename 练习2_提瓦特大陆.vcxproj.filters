@@ -18,5 +18,49 @@
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="Animation.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Plant.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="SpecificPlants.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Bullet.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Sun.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Zombie.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="BrainBase.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Animation.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Plant.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="SpecificPlants.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Bullet.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Sun.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="Zombie.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="BrainBase.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

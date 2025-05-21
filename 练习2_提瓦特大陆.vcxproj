@@ -128,7 +128,23 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Animation.cpp" />
+    <ClCompile Include="BrainBase.cpp" />
+    <ClCompile Include="Bullet.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Plant.cpp" />
+    <ClCompile Include="SpecificPlants.cpp" />
+    <ClCompile Include="Sun.cpp" />
+    <ClCompile Include="Zombie.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Animation.h" />
+    <ClInclude Include="BrainBase.h" />
+    <ClInclude Include="Bullet.h" />
+    <ClInclude Include="Plant.h" />
+    <ClInclude Include="SpecificPlants.h" />
+    <ClInclude Include="Sun.h" />
+    <ClInclude Include="Zombie.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
