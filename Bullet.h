@@ -6,7 +6,7 @@
 class Bullet {
 private:
     Animation* anim;
-    double speed;
+    double speed = 100;
     POINT position;
     bool is_active;
 
