@@ -233,8 +233,8 @@ int main() {
         // 边界检测
         if (player_position.x < 0) player_position.x = 0;
         if (player_position.y < 0) player_position.y = 0;
-        if (player_position.x > 1280 - 80) player_position.x = 1280 - 70; // 假设角色宽度为80
-        if (player_position.y > 720 - 80) player_position.y = 720 - 80;   // 假设角色高度为80
+        if (player_position.x > 1280 - 80) player_position.x = 1280 - 81; // 假设角色宽度为80
+        if (player_position.y > 720 - 80) player_position.y = 720 - 81;   // 假设角色高度为80
 
         // 更新僵尸生成器
         if (Zombie* new_zombie = spawner.Update(1000 / 144)) {

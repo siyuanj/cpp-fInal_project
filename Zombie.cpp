@@ -4,7 +4,7 @@
 
 // 基础僵尸类实现
 Zombie::Zombie(int init_hp, int init_attack_power, POINT init_pos, double init_speed,
-    Atlas* atlas, int frame_interval, int atk_interval)
+    Atlas * atlas, int frame_interval, int atk_interval)
     : hp(init_hp), attack_power(init_attack_power), position(init_pos),
     speed(init_speed), is_alive(true), attack_interval(atk_interval), attack_timer(0),
     target_plant(nullptr), target_brain(nullptr), attacking_brain(false) {
@@ -85,34 +85,37 @@ void Zombie::Update(int delta, const std::vector<Plant*>& plants, BrainBase* bra
     // 计算移动距离
     double move_distance = speed * delta / 1000.0;
 
-    // 如果没有目标，直接向左移动
+    // 如果没有目标，保持默认向左移动
     if (!target_plant && !target_brain) {
         position.x -= static_cast<long>(move_distance);
     }
     // 如果有目标，向目标移动
     else {
-        double dx = target_position.x - position.x;
-        double dy = target_position.y - position.y;
+        // 获取实际目标位置
+        POINT actual_target = target_plant ? target_plant->GetPosition() : target_brain->GetPosition();
+
+        // 计算与目标的距离和方向
+        double dx = actual_target.x - position.x;
+        double dy = actual_target.y - position.y;
         double distance = sqrt(dx * dx + dy * dy);
 
-        if (distance <= 50) {  // 在攻击范围内
+        // 在攻击范围内则攻击
+        if (distance <= 50) {
             attack_timer += delta;
             if (attack_timer >= attack_interval) {
                 Attack();
                 attack_timer = 0;
             }
         }
-        else {  // 向目标移动
-            position.x -= static_cast<long>(move_distance);  // 始终向左移动
-            
-            // 调整Y轴位置
-            if (abs(dy) > 5) {
-                if (dy > 0) {
-                    position.y += static_cast<long>(move_distance / 2);  // Y轴移动速度减半
-                } else {
-                    position.y -= static_cast<long>(move_distance / 2);
-                }
-            }
+        // 需要移动时
+        else {
+            // 计算移动方向（单位向量）
+            double direction_x = dx / distance;
+            double direction_y = dy / distance;
+
+            // 应用移动
+            position.x += static_cast<long>(direction_x * move_distance);
+            position.y += static_cast<long>(direction_y * move_distance);
         }
     }
 
@@ -149,12 +152,12 @@ void Zombie::Draw() {
 // 普通僵尸实现
 NormalZombie::NormalZombie(POINT init_pos)
     : Zombie(100,                // 生命值
-            10,                  // 攻击力
-            init_pos,
-            100.0,              // 速度提高到100
-            new Atlas(_T("img/normal_zombie_%d.png"), 22),
-            100,
-            1000) {
+        10,                  // 攻击力
+        init_pos,
+        100.0,              // 速度提高到100
+        new Atlas(_T("img/normal_zombie_%d.png"), 22),
+        100,
+        1000) {
 }
 
 // 有防具僵尸基类实现
