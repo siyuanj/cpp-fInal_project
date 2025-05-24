@@ -99,6 +99,7 @@ int main() {
     Atlas* tombstoneAtlas = nullptr;
     Atlas* brainBaseAtlas = nullptr;
 	Atlas* pauseButtonAtlas = nullptr;
+    Atlas* sun_back = nullptr;
 
     backgroundAtlas = new Atlas(_T("img/background.png"));// 背景
     beginButtonAtlas = new Atlas(_T("img/begin_idle.png"));// 开始按键
@@ -108,14 +109,9 @@ int main() {
     tombstoneAtlas = new Atlas(_T("img/tombstone.png"));// 墓碑
     brainBaseAtlas = new Atlas(_T("img/brain_base.png"));// 大脑基地
     pauseButtonAtlas = new Atlas(_T("img/pause_idle.png"));// 暂停按键
+	sun_back = new Atlas(_T("img/sun_back.png"));// 阳光栏
+
     ExMessage msg;              // 消息结构体，用于处理用户输入
-
-
-
-    //// 加载游戏资源
-    //IMAGE img_background;        // 背景图片
-    //IMAGE sun_back;             // 阳光计数器背景
-    //IMAGE tombstone;            // 墓碑图片
 
 
 
@@ -155,49 +151,13 @@ int main() {
     bool moving_left = false;   // 向左移动标志
     bool moving_right = false;  // 向右移动标志
 
-    //// 加载图片资源
-    //loadimage(&img_background, _T("img/background.png"));            // 加载背景
-    //loadimage(&sun_back, _T("img/sun_back.png"));                   // 加载阳光栏
-    //loadimage(&tombstone, _T("img/tombstone.png"), 150, 150);       // 加载墓碑
 
     // 初始化僵尸系统
     POINT tombstone_pos = { 1000, 50 };        // 设置墓碑（僵尸生成点）位置
     ZombieSpawner spawner(tombstone_pos);      // 创建僵尸生成器
     std::vector<Zombie*> zombies;              // 僵尸容器
 
-    
-
-    //// 游戏开始前的大脑放置阶段
-    //settextcolor(WHITE);
-    //settextstyle(40, 0, _T("Arial"));
-    //outtextxy(400, 300, _T("点击屏幕放置大脑基地"));
-    //FlushBatchDraw();
-
-
-
-
-
-
-
-
-    //// 等待玩家放置大脑
-    //while (!game_started && running) {
-    //    if (peekmessage(&msg)) {
-    //        if (msg.message == WM_LBUTTONDOWN) {
-    //            POINT click_pos = { msg.x, msg.y };
-    //            // 确保大脑放置在合理位置
-    //            if (click_pos.x > 100 && click_pos.x < 1180 && 
-    //                click_pos.y > 100 && click_pos.y < 620) {
-    //                brain->SetPosition(click_pos);
-    //                game_started = true;
-    //            }
-    //        }
-    //        else if (msg.message == WM_KEYDOWN && msg.vkcode == VK_ESCAPE) {
-    //            running = false;
-    //        }
-    //    }
-    //}
-
+  
     // 主游戏循环
     while (running) {
         DWORD startTime = GetTickCount(); // 记录帧开始时间
@@ -298,6 +258,73 @@ int main() {
                 if (msg.message == WM_KEYDOWN && msg.vkcode == VK_ESCAPE) {
                     gameState = PAUSED;
                 }
+                switch (msg.message) {
+                case WM_KEYDOWN:    // 按键按下事件
+                    switch (msg.vkcode) {
+                    case '1': selected_plant = 1; break;  // 选择向日葵
+                    case '2': selected_plant = 2; break;  // 选择豌豆射手
+                    case '3': selected_plant = 3; break;  // 选择坚果墙
+                    case 'W': case VK_UP: moving_up = true; break;
+                    case 'S': case VK_DOWN: moving_down = true; break;
+                    case 'A': case VK_LEFT:
+                        moving_left = true;
+                        facing_left = true;
+                        break;
+                    case 'D': case VK_RIGHT:
+                        moving_right = true;
+                        facing_left = false;
+                        break;
+                        //case VK_ESCAPE: running = false; break;
+                    }
+                    break;
+
+                case WM_KEYUP:      // 按键释放事件
+                    switch (msg.vkcode) {
+                    case '1': case '2': case '3': selected_plant = 0; break;
+                    case 'W': case VK_UP: moving_up = false; break;
+                    case 'S': case VK_DOWN: moving_down = false; break;
+                    case 'A': case VK_LEFT: moving_left = false; break;
+                    case 'D': case VK_RIGHT: moving_right = false; break;
+                    }
+                    break;
+
+                case WM_LBUTTONDOWN:    // 鼠标左键点击事件
+                    if (selected_plant > 0) {
+                        POINT click_pos = { msg.x, msg.y };
+                        Plant* new_plant = nullptr;
+                        int cost = 0;
+
+                        // 根据选择创建对应的植物
+                        switch (selected_plant) {
+                        case 1: // 向日葵
+                            cost = 50;
+                            if (sun_count >= cost) {
+                                new_plant = new Sunflower(click_pos);
+                                sun_count -= cost;
+                            }
+                            break;
+                        case 2: // 豌豆射手
+                            cost = 100;
+                            if (sun_count >= cost) {
+                                new_plant = new Peashooter(click_pos);
+                                sun_count -= cost;
+                            }
+                            break;
+                        case 3: // 坚果墙
+                            cost = 50;
+                            if (sun_count >= cost) {
+                                new_plant = new WallNut(click_pos);
+                                sun_count -= cost;
+                            }
+                            break;
+                        }
+
+                        if (new_plant) {
+                            plants.push_back(new_plant);
+                        }
+                    }
+                    break;
+                }
                 break;
             }
             case PAUSED: {
@@ -320,73 +347,7 @@ int main() {
 		//***************************************阶段控制结束，开始后续按键处理*****************************************//
 
         if(gameState == PLAYING){
-            switch (msg.message) {
-                case WM_KEYDOWN:    // 按键按下事件
-                    switch (msg.vkcode) {
-                        case '1': selected_plant = 1; break;  // 选择向日葵
-                        case '2': selected_plant = 2; break;  // 选择豌豆射手
-                        case '3': selected_plant = 3; break;  // 选择坚果墙
-                        case 'w': case VK_UP: moving_up = true; break;
-                        case 's': case VK_DOWN: moving_down = true; break;
-                        case 'a': case VK_LEFT: 
-                            moving_left = true; 
-                            facing_left = true; 
-                            break;
-                        case 'D': case VK_RIGHT: 
-                            moving_right = true; 
-                            facing_left = false; 
-                            break;
-                        //case VK_ESCAPE: running = false; break;
-                    }
-                    break;
-
-                case WM_KEYUP:      // 按键释放事件
-                    switch (msg.vkcode) {
-                        case '1': case '2': case '3': selected_plant = 0; break;
-                        case 'w': case VK_UP: moving_up = false; break;
-                        case 's': case VK_DOWN: moving_down = false; break;
-                        case 'a': case VK_LEFT: moving_left = false; break;
-                        case 'd': case VK_RIGHT: moving_right = false; break;
-                    }
-                    break;
-
-                case WM_LBUTTONDOWN:    // 鼠标左键点击事件
-                    if (selected_plant > 0) {
-                        POINT click_pos = { msg.x, msg.y };
-                        Plant* new_plant = nullptr;
-                        int cost = 0;
-
-                        // 根据选择创建对应的植物
-                        switch (selected_plant) {
-                            case 1: // 向日葵
-                                cost = 50;
-                                if (sun_count >= cost) {
-                                    new_plant = new Sunflower(click_pos);
-                                    sun_count -= cost;
-                                }
-                                break;
-                            case 2: // 豌豆射手
-                                cost = 100;
-                                if (sun_count >= cost) {
-                                    new_plant = new Peashooter(click_pos);
-                                    sun_count -= cost;
-                                }
-                                break;
-                            case 3: // 坚果墙
-                                cost = 50;
-                                if (sun_count >= cost) {
-                                    new_plant = new WallNut(click_pos);
-                                    sun_count -= cost;
-                                }
-                                break;
-                        }
-
-                        if (new_plant) {
-                            plants.push_back(new_plant);
-                        }
-                    }
-                    break;
-            }
+            
         }
 		// *********************************按键处理结束****************************************//
         BeginBatchDraw(); // 开始批量绘图，防止闪烁
@@ -444,6 +405,7 @@ int main() {
             cleardevice();
             // 显示背景
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
+            putimage_alpha(0, 0, sun_back->frame_list[0]);
 
             // 显示开始游戏按钮（使用图片）
             int buttonX = WIDTH / 2 - 100;
@@ -455,6 +417,7 @@ int main() {
             // 绘制僵尸数量选择界面
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
+            putimage_alpha(0, 0, sun_back->frame_list[0]);
 
             // 显示提示文字
             drawChineseText(WIDTH / 2 - 200, HEIGHT / 2 - 250, _T("选择僵尸生成点数量"), 40, RGB(255, 255, 255));
@@ -474,7 +437,7 @@ int main() {
             // 绘制基地放置界面
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
-
+            putimage_alpha(0, 0, sun_back->frame_list[0]);
             // 显示已选择的tombstone
             for (const auto& tomb : tombstonePositions) {
                 putimage_alpha(tomb.x, tomb.y, tombstoneAtlas->frame_list[0]);
@@ -496,7 +459,7 @@ int main() {
             // 绘制游戏界面
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
-
+            putimage_alpha(0, 0, sun_back->frame_list[0]);
             // 显示tombstone
             for (const auto& tomb : tombstonePositions) {
                 putimage_alpha(tomb.x, tomb.y, tombstoneAtlas->frame_list[0]);
@@ -508,7 +471,7 @@ int main() {
             }
 
             // 在这里可以添加更多游戏内容
-            drawChineseText(10, 10, _T("游戏进行中 - 按ESC暂停"), 20, RGB(255, 255, 255));
+            drawChineseText(1100, 10, _T("游戏进行中 - 按ESC暂停"), 20, RGB(255, 255, 255));
             // 绘制游戏对象
             brain->Draw();              // 绘制大脑基地
             for (auto plant : plants) { // 绘制植物
@@ -578,10 +541,9 @@ int main() {
             // 绘制暂停界面
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
+            putimage_alpha(0, 0, sun_back->frame_list[0]);
             // 显示开始游戏按钮（使用图片）
-            int buttonX = WIDTH / 2 - 100;
-            int buttonY = HEIGHT / 2 + 50;
-            putimage_alpha(buttonX, buttonY, pauseButtonAtlas->frame_list[0]);
+            
             // 显示游戏内容
             for (const auto& tomb : tombstonePositions) {
                 putimage_alpha(tomb.x, tomb.y, tombstoneAtlas->frame_list[0]);
@@ -589,10 +551,9 @@ int main() {
             if (basePosition.x >= 0 && basePosition.y >= 0) {
                 putimage_alpha(basePosition.x, basePosition.y, brainBaseAtlas->frame_list[0]);
             }
-
-            // 暂停信息
-            //putimage_alpha(WIDTH / 2 - 200, HEIGHT / 2 - 50, pauseText);
-            //drawChineseText(WIDTH / 2 - 180, HEIGHT / 2 - 30, _T("游戏暂停 - 点击继续"), 40);
+            int buttonX = WIDTH / 2 - 100;
+            int buttonY = HEIGHT / 2 + 50;
+            putimage_alpha(buttonX, buttonY, pauseButtonAtlas->frame_list[0]);
             break;
         }
         case GAME_OVER: {
