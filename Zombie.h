@@ -29,6 +29,10 @@ protected:
     BrainBase* target_brain;
     bool attacking_brain;
 
+    //// 新增：内部浮点数位置，用于精确计算
+    //double internal_pos_x;
+    //double internal_pos_y;
+
     // 查找最近的目标
     void FindNearestTarget(const std::vector<Plant*>& plants, BrainBase* brain);
     double CalculateDistance(POINT p1, POINT p2) const;

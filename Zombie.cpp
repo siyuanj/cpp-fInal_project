@@ -113,8 +113,9 @@ void Zombie::Update(int delta, const std::vector<Plant*>& plants, BrainBase* bra
     }
 
     // 计算移动距离
-    double move_distance = speed * delta / 1000.0;
-
+    double move_distance = speed * delta / 100.0;
+	// delta为时间增量（毫秒），speed为速度（像素/0.1秒），move_distance为移动距离（像素）
+    // speed*10  像素/秒
     // 如果没有目标，保持默认向左移动
     if (!target_plant && !target_brain) {
         position.x -= static_cast<long>(move_distance);
@@ -184,7 +185,7 @@ NormalZombie::NormalZombie(POINT init_pos)
     : Zombie(100,                // 生命值
         10,                  // 攻击力
         init_pos,
-        50,              // 速度提高到100
+        3,              // 速度提高到100
         new Atlas(_T("img/normal_zombie_%d.png"), 22),
         100,
         1000) {
@@ -243,7 +244,7 @@ ConeZombie::ConeZombie(POINT init_pos)
     : ArmoredZombie(100,
         80,
         init_pos,
-        50.0,               // 速度提高到80
+        3.0,               // 速度提高到80
         new Atlas(_T("img/normal_zombie_%d.png"), 22),
         new Atlas(_T("img/cone_head_zombie_%d.png"), 20),
         100,
@@ -255,7 +256,7 @@ BucketZombie::BucketZombie(POINT init_pos)
     : ArmoredZombie(100,
         150,
         init_pos,
-        50.0,               // 速度提高到60
+        3.0,               // 速度提高到60
         new Atlas(_T("img/normal_zombie_%d.png"), 22),
         new Atlas(_T("img/bucket_head_zombie_%d.png"), 14),
         100,
