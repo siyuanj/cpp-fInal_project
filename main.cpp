@@ -22,13 +22,42 @@ const double PI = 3.1415926;         // 圆周率常量
 double PLAYER_SPEED = 5.0;           // 玩家移动速度
 POINT player_position = { 500,500 }; // 玩家初始位置
 int sun_count = 50;                  // 初始阳光数量
+#define WIDTH 1280                   // 窗口宽度
+#define HEIGHT 720                   // 窗口高度
+
+
+
 
 // 创建全局的玩家动画图集对象
 Atlas* atlas_player_left = new Atlas(_T("img/player_left_%d.png"), 6);   // 左向动画帧
 Atlas* atlas_player_right = new Atlas(_T("img/player_right_%d.png"), 6);  // 右向动画帧
 
+
+
+// 游戏状态枚举
+enum GameState {
+    START_SCREEN,
+    SELECT_ZOMBIES,
+    PLACE_BASE,
+    PLAYING,
+    PAUSED,
+    GAME_OVER
+};
+
+// 预定义的tombstone位置
+struct TombstonePosition {
+    int x, y;
+    TombstonePosition(int px, int py) : x(px), y(py) {}
+};
+// 检查点是否在矩形内
+bool isPointInRect(int px, int py, int x, int y, int width, int height) {
+    return px >= x && px <= x + width && py >= y && py <= y + height;
+}
+
+
 int main() {
-    initgraph(1280, 720); // 初始化图形窗口，设置大小为1280x720
+    initgraph(WIDTH, HEIGHT); // 初始化图形窗口，设置大小为1280x720
+    cleardevice();
 
     // 设置文字显示样式
     LOGFONT font;
@@ -82,6 +111,13 @@ int main() {
     settextstyle(40, 0, _T("Arial"));
     outtextxy(400, 300, _T("点击屏幕放置大脑基地"));
     FlushBatchDraw();
+
+
+
+
+
+
+
 
     // 等待玩家放置大脑
     while (!game_started && running) {
