@@ -122,7 +122,7 @@ int main() {
     // tombstone 管理
     int selectedZombieCount = 0;// 选择的墓碑数量
 	std::vector<tombstone*> tombstones; // 存储tombstone指针的数组，针对tombstone类的指针数组
-    TombstonePosition basePosition(-1, -1);// 基地位置，初始为无效值
+    POINT basePosition = {-1, -1};// 基地位置，初始为无效值
     // 预定义的tombstone生成位置
     std::vector<TombstonePosition> possibleTombstonePositions = {
         TombstonePosition(100, 100),
@@ -234,8 +234,8 @@ int main() {
 
                         // 向僵尸生成池中传入墓碑位置
                         if (spawner == nullptr) { // 如果是第一次创建
-                            // 假设基础生成间隔为 5000 毫秒 (5秒)，生成概率为 0.5
-                            // 你可以根据需要调整这些默认值
+                            // 基础生成间隔为 1000 毫秒 ，生成概率为 0.5
+                            // 可需要调整这些默认值
                             spawner = new ZombieSpawner(current_tombstone_positions, 1000, 0.5);
                         }
                         else { // 如果已经存在，则更新其墓碑位置
@@ -268,6 +268,7 @@ int main() {
                     if (validPosition) {
                         basePosition.x = msg.x - 125; // 居中放置
                         basePosition.y = msg.y - 125;
+                        brain->SetPosition(basePosition); // **新增：设置BrainBase的实际位置**
                         gameState = PLAYING;
                     }
                 }
@@ -419,6 +420,12 @@ int main() {
         for (auto plant : plants) {
             plant->Update(delta);
         }
+        // 更新所有僵尸
+        for (auto zombie : zombies) {
+            if (zombie && zombie->IsAlive()) { // 添加null和存活检查
+                zombie->Update(50, plants, brain); // 确保 brain 对象被传递
+            }
+        }
 
         // 绘制游戏画面
         cleardevice();  // 清空屏幕
@@ -484,7 +491,7 @@ int main() {
 
             // 显示基地
             if (basePosition.x >= 0 && basePosition.y >= 0) {
-                putimage_alpha(basePosition.x, basePosition.y, brainBaseAtlas->frame_list[0]);
+                brain->Draw();
             }
 
             // 在这里可以添加更多游戏内容

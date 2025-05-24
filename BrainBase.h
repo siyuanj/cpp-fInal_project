@@ -8,9 +8,9 @@ class BrainBase {
 private:
     int hp = 1000;
     POINT position;
-    IMAGE* img;
-    Atlas* brain_base = new Atlas(_T("img/brain_base.png"));
+    Atlas* brain_base;
     bool is_placed;
+	bool is_alive;
 
 public:
     BrainBase();

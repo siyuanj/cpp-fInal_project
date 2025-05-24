@@ -1,6 +1,8 @@
 #include "Zombie.h"
+#include "Plant.h" // 确保包含了 Plant.h 以使用 DefensePlant
 #include <cmath>
 #include <random>
+#include <algorithm> // 需要包含 <algorithm> 以使用 std::sort (如果需要排序) 或其他算法
 
 // 基础僵尸类实现
 Zombie::Zombie(int init_hp, int init_attack_power, POINT init_pos, double init_speed,
@@ -26,51 +28,79 @@ double Zombie::CalculateDistance(POINT p1, POINT p2) const {
 }
 
 void Zombie::FindNearestTarget(const std::vector<Plant*>& plants, BrainBase* brain) {
-    double min_distance = 1e9;
-    Plant* nearest_defense = nullptr;
-    Plant* nearest_other = nullptr;
+    target_plant = nullptr;
+    target_brain = nullptr;
+    attacking_brain = false;
+    double min_dist_sq = -1.0; // 使用距离的平方以避免开方运算, -1.0 表示尚未找到目标
 
-    // 首先寻找最近的防御型植物和其他植物
+    Plant* current_target_plant = nullptr;
+
+    // 优先级1: 寻找最近的防御型植物 (DefensePlant 且 IsPriority() 返回 true)
     for (Plant* plant : plants) {
-        if (!plant->IsAlive()) continue;
-
-        POINT plant_pos = plant->GetPosition();
-        double dist = CalculateDistance(position, plant_pos);
-
-        if (DefensePlant* defense = dynamic_cast<DefensePlant*>(plant)) {
-            if (dist < min_distance) {
-                min_distance = dist;
-                nearest_defense = plant;
-            }
-        }
-        else {
-            if (dist < min_distance) {
-                min_distance = dist;
-                nearest_other = plant;
+        if (plant && plant->IsAlive()) {
+            if (DefensePlant* defense_plant = dynamic_cast<DefensePlant*>(plant)) {
+                if (defense_plant->IsPriority()) { // 假设 DefensePlant 有 IsPriority() 方法
+                    POINT plant_pos = plant->GetPosition();
+                    double dist_sq = pow(position.x - plant_pos.x, 2) + pow(position.y - plant_pos.y, 2);
+                    if (current_target_plant == nullptr || dist_sq < min_dist_sq) {
+                        min_dist_sq = dist_sq;
+                        current_target_plant = plant;
+                    }
+                }
             }
         }
     }
 
-    // 优先选择防御型植物
-    if (nearest_defense) {
-        target_plant = nearest_defense;
-        target_brain = nullptr;
-        attacking_brain = false;
+    if (current_target_plant) {
+        target_plant = current_target_plant;
         target_position = target_plant->GetPosition();
+        return; // 找到最高优先级目标，直接返回
     }
-    // 其次选择其他植物
-    else if (nearest_other) {
-        target_plant = nearest_other;
-        target_brain = nullptr;
-        attacking_brain = false;
+
+    // 优先级2: 寻找最近的其他类型植物
+    min_dist_sq = -1.0; // 重置最小距离
+    current_target_plant = nullptr; // 重置当前目标
+
+    for (Plant* plant : plants) {
+        if (plant && plant->IsAlive()) {
+            // 确保不是优先防御型植物 (如果上面已经处理过)
+            // 或者更简单的方式是，如果它不是 DefensePlant 或者 IsPriority() 为 false
+            bool is_priority_defense = false;
+            if (DefensePlant* defense_plant = dynamic_cast<DefensePlant*>(plant)) {
+                if (defense_plant->IsPriority()) {
+                    is_priority_defense = true;
+                }
+            }
+
+            if (!is_priority_defense) {
+                POINT plant_pos = plant->GetPosition();
+                double dist_sq = pow(position.x - plant_pos.x, 2) + pow(position.y - plant_pos.y, 2);
+                if (current_target_plant == nullptr || dist_sq < min_dist_sq) {
+                    min_dist_sq = dist_sq;
+                    current_target_plant = plant;
+                }
+            }
+        }
+    }
+
+    if (current_target_plant) {
+        target_plant = current_target_plant;
         target_position = target_plant->GetPosition();
+        return; // 找到目标，返回
     }
-    // 最后选择大脑基地
-    else if (brain && brain->IsAlive()) {
+
+    // 优先级 3: 攻击大脑基地
+    if (brain && brain->IsAlive() && brain->IsPlaced()) { // 确保基地已放置且存活
         target_plant = nullptr;
         target_brain = brain;
         attacking_brain = true;
         target_position = brain->GetPosition();
+        // 不需要检查距离，因为基地是最后的选择，僵尸会直接走向它
+    }
+    else {
+        // 如果没有植物也没有基地，僵尸可以设定一个默认移动目标，例如屏幕左侧边缘
+        // 或者保持当前目标为空，在 Update 中处理无目标的情况
+        target_position = { 0, position.y }; // 示例：向屏幕最左侧移动
     }
 }
 
@@ -93,14 +123,14 @@ void Zombie::Update(int delta, const std::vector<Plant*>& plants, BrainBase* bra
     else {
         // 获取实际目标位置
         POINT actual_target = target_plant ? target_plant->GetPosition() : target_brain->GetPosition();
-
+		// 语法有些复杂，相当于实际目标是植物或基地的当前位置？
         // 计算与目标的距离和方向
         double dx = actual_target.x - position.x;
         double dy = actual_target.y - position.y;
         double distance = sqrt(dx * dx + dy * dy);
 
         // 在攻击范围内则攻击
-        if (distance <= 50) {
+        if (distance <= 10) {
             attack_timer += delta;
             if (attack_timer >= attack_interval) {
                 Attack();
@@ -154,7 +184,7 @@ NormalZombie::NormalZombie(POINT init_pos)
     : Zombie(100,                // 生命值
         10,                  // 攻击力
         init_pos,
-        100.0,              // 速度提高到100
+        50,              // 速度提高到100
         new Atlas(_T("img/normal_zombie_%d.png"), 22),
         100,
         1000) {
@@ -213,7 +243,7 @@ ConeZombie::ConeZombie(POINT init_pos)
     : ArmoredZombie(100,
         80,
         init_pos,
-        80.0,               // 速度提高到80
+        50.0,               // 速度提高到80
         new Atlas(_T("img/normal_zombie_%d.png"), 22),
         new Atlas(_T("img/cone_head_zombie_%d.png"), 20),
         100,
@@ -225,7 +255,7 @@ BucketZombie::BucketZombie(POINT init_pos)
     : ArmoredZombie(100,
         150,
         init_pos,
-        60.0,               // 速度提高到60
+        50.0,               // 速度提高到60
         new Atlas(_T("img/normal_zombie_%d.png"), 22),
         new Atlas(_T("img/bucket_head_zombie_%d.png"), 14),
         100,
