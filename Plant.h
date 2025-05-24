@@ -7,6 +7,7 @@
 class Plant {
 protected:
     int hp;
+    int max_hp; // 存储最大生命值
     POINT position;
     int cost;
     Animation* anim;
@@ -17,6 +18,7 @@ public:
     virtual ~Plant();
     virtual void Update(int delta) = 0;
     int GetHP() const;
+    int GetMaxHP() const; // 获取最大生命值
     POINT GetPosition() const;
     int GetCost() const;
     bool IsAlive() const;

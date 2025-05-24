@@ -66,3 +66,4 @@ WallNut::WallNut(POINT pos)
     : DefensePlant(400, pos, 50, new Atlas(_T("img/wallnut_%d.png"), 15),
         150, 20, true) {
 }
+//因为格挡比攻击还高，所以杀不死

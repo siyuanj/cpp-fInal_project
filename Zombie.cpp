@@ -108,9 +108,12 @@ void Zombie::Update(int delta, const std::vector<Plant*>& plants, BrainBase* bra
     if (!is_alive) return;
 
     // 查找并更新目标
-    if ((!target_plant || !target_plant->IsAlive()) && (!target_brain || !target_brain->IsAlive())) {
-        FindNearestTarget(plants, brain);
-    }
+    /*if ((!target_plant || !target_plant->IsAlive()) && (!target_brain || !target_brain->IsAlive())) {
+        // 确认目标就不修改
+
+    }*/
+
+    FindNearestTarget(plants, brain);// 随时调整目标
 
     // 计算移动距离
     double move_distance = speed * delta / 100.0;

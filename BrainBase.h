@@ -7,6 +7,7 @@
 class BrainBase {
 private:
     int hp = 1000;
+	int max_hp = 1000;
     POINT position;
     Atlas* brain_base;
     bool is_placed;

@@ -31,7 +31,9 @@ public:
     Animation(Atlas* atlas, int jiange);
     ~Animation();
     void showimage(int x, int y, int delta);
-
+    Atlas* getanim_atlas(){
+        return anim_atlas;
+	}
 };
 
 // Helper function declaration

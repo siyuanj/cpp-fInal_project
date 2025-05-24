@@ -100,6 +100,7 @@ int main() {
     Atlas* brainBaseAtlas = nullptr;
     Atlas* pauseButtonAtlas = nullptr;
     Atlas* sun_back = nullptr;
+    Atlas* gameover_botton = nullptr;
 
     POINT tombstone_pos = { 1000, 50 }; // 初始墓碑位置
 
@@ -111,6 +112,7 @@ int main() {
     brainBaseAtlas = new Atlas(_T("img/brain_base.png"));// 大脑基地
     pauseButtonAtlas = new Atlas(_T("img/pause_idle.png"));// 暂停按键
     sun_back = new Atlas(_T("img/sun_back.png"));// 阳光栏
+    gameover_botton = new Atlas(_T("img/gameover_eng.png"));// 阳光栏
 
     ExMessage msg;              // 消息结构体，用于处理用户输入
 
@@ -159,13 +161,8 @@ int main() {
         // 检查游戏是否失败
         if (!brain->IsAlive()) {
             cleardevice();
-            settextcolor(RED);
-            settextstyle(60, 0, _T("Arial"));
-            outtextxy(480, 300, _T("游戏结束!"));
-            FlushBatchDraw();
-            Sleep(2000);
-            running = false;
-            continue;
+			gameState = GAME_OVER; // 设置游戏状态为结束
+            
         }
 
         // 处理用户输入——阶段处理部分
@@ -363,6 +360,14 @@ int main() {
             }
             case GAME_OVER: {
                 running = false;
+                /*settextcolor(RED);
+                settextstyle(60, 0, _T("Arial"));
+                outtextxy(480, 300, _T("游戏结束!"));
+                FlushBatchDraw();
+                Sleep(2000);*/
+                
+                
+                //continue;
                 break;
             }
             }
@@ -571,6 +576,13 @@ int main() {
             break;
         }
         case GAME_OVER: {
+            int buttonX = WIDTH / 2 - 100;
+            int buttonY = HEIGHT / 2 + 50;
+
+            putimage_alpha(buttonX, buttonY, gameover_botton->frame_list[0]);
+            if (msg.message == WM_LBUTTONDOWN) {
+                break; // 点击后退出游戏循环
+            }
             break;
         }
         }
