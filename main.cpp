@@ -118,8 +118,10 @@ int main() {
     GameState gameState = START_SCREEN;
     int lastTime = GetTickCount();
     bool running = true;
+
+    // tombstone 管理
     int selectedZombieCount = 0;// 选择的墓碑数量
-    std::vector<tombstone*> tombstones; // 修改为存储tombstone指针
+	std::vector<tombstone*> tombstones; // 存储tombstone指针的数组，针对tombstone类的指针数组
     TombstonePosition basePosition(-1, -1);// 基地位置，初始为无效值
     // 预定义的tombstone生成位置
     std::vector<TombstonePosition> possibleTombstonePositions = {
@@ -147,7 +149,7 @@ int main() {
     bool moving_right = false;  // 向右移动标志
 
     // 初始化僵尸系统
-    ZombieSpawner spawner(tombstone_pos);      // 创建僵尸生成器
+    ZombieSpawner* spawner = nullptr; // 声明spawner指针
     std::vector<Zombie*> zombies;              // 僵尸容器
 
     // 主游戏循环
@@ -200,6 +202,9 @@ int main() {
                         selectedZombieCount = 3;
                     }
 
+
+                    
+                
                     if (selectedZombieCount > 0) {
                         // 清理旧的tombstone对象
                         for (auto t : tombstones) {
@@ -217,6 +222,24 @@ int main() {
                             // 创建tombstone对象并添加到容器中
                             POINT p = { possibleTombstonePositions[indices[i]].x, possibleTombstonePositions[indices[i]].y };
                             tombstones.push_back(new tombstone(p));
+                        }
+
+                        std::vector<POINT> current_tombstone_positions;
+                        for (const auto& t_ptr : tombstones) {
+                            if (t_ptr) { // 确保指针有效
+                                current_tombstone_positions.push_back(t_ptr->getPosition());
+                                // 将指针存入数组
+                            }
+                        }
+
+                        // 向僵尸生成池中传入墓碑位置
+                        if (spawner == nullptr) { // 如果是第一次创建
+                            // 假设基础生成间隔为 5000 毫秒 (5秒)，生成概率为 0.5
+                            // 你可以根据需要调整这些默认值
+                            spawner = new ZombieSpawner(current_tombstone_positions, 1000, 0.5);
+                        }
+                        else { // 如果已经存在，则更新其墓碑位置
+                            spawner->UpdateSpawnPositions(current_tombstone_positions);
                         }
                         gameState = PLACE_BASE;  // 进入放置基地状态
                     }
@@ -365,8 +388,12 @@ int main() {
         if (player_position.y > 720 - 80) player_position.y = 720 - 81;
 
         // 更新僵尸系统
-        if (Zombie* new_zombie = spawner.Update(delta)) {
-            zombies.push_back(new_zombie);
+        if (spawner != nullptr) { // 确保 spawner 已被创建
+            if (Zombie* new_zombie = spawner->Update(delta)) {
+				// 通过delta判断是否应该生成新的僵尸,Update函数返回一个新的僵尸对象指针
+				// 僵尸类型、位置等均由Update函数内部逻辑决定
+                zombies.push_back(new_zombie);
+            }
         }
 
         // 更新所有僵尸
@@ -471,7 +498,7 @@ int main() {
                 zombie->Draw();
             }
 
-            // 绘制UI层
+			// ***********************绘制UI层******************//
             // 阳光数量
             setfillcolor(RGB(255, 215, 0));
             settextcolor(RGB(0, 0, 0));
@@ -569,6 +596,10 @@ int main() {
         delete tomb;
     }
     tombstones.clear();
+    if (spawner != nullptr) {
+        delete spawner;
+        spawner = nullptr;
+    }
 
     // 清理其他资源
     delete brain;

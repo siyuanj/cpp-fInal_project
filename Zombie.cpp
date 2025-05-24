@@ -233,31 +233,86 @@ BucketZombie::BucketZombie(POINT init_pos)
 }
 
 // ZombieSpawner实现
-ZombieSpawner::ZombieSpawner(POINT pos, int interval, double chance)
-    : spawn_position(pos), spawn_interval(interval),
-    spawn_timer(0), spawn_chance(chance) {
+ZombieSpawner::ZombieSpawner(const std::vector<POINT>& initial_spawn_positions, int base_interval, double chance)
+    : spawn_positions(initial_spawn_positions),
+    base_spawn_interval(base_interval),
+	spawn_timer(0),// 计时器初始化为0
+    spawn_chance(chance) {
+    std::random_device rd;
+    rng.seed(rd()); // 使用随机设备初始化随机数生成器
+
+    if (spawn_positions.empty()) {
+        // 如果没有提供生成点，可以设置一个默认位置或抛出错误
+        // 这里我们简单地将当前间隔设置为基础间隔
+        current_spawn_interval = base_spawn_interval;
+    }
+    else {
+        int num_tombstones = spawn_positions.size();
+        if (num_tombstones == 1) {
+            current_spawn_interval = base_spawn_interval;
+        }
+        else if (num_tombstones == 2) {
+            current_spawn_interval = base_spawn_interval / 2;
+        }
+        else { // 3个或更多墓碑
+            current_spawn_interval = base_spawn_interval / 3;
+        }
+        // 确保间隔不会太小
+        if (current_spawn_interval < 100) { // 例如，最小间隔100ms
+            current_spawn_interval = 100;
+        }
+    }
 }
 
-Zombie* ZombieSpawner::Update(int delta) {
+void ZombieSpawner::UpdateSpawnPositions(const std::vector<POINT>& new_spawn_positions) {
+    spawn_positions = new_spawn_positions;
+    if (spawn_positions.empty()) {
+        current_spawn_interval = base_spawn_interval;
+    }
+    else {
+        int num_tombstones = spawn_positions.size();
+        if (num_tombstones == 1) {
+            current_spawn_interval = base_spawn_interval;
+        }
+        else if (num_tombstones == 2) {
+            current_spawn_interval = base_spawn_interval / 2;
+        }
+        else {
+            current_spawn_interval = base_spawn_interval / 3;
+        }
+        if (current_spawn_interval < 100) {
+            current_spawn_interval = 100;
+        }
+    }
+}
+
+Zombie* ZombieSpawner :: Update(int delta) {
+    if (spawn_positions.empty()) {
+        return nullptr; // 没有生成点则不生成僵尸
+    }
+
     spawn_timer += delta;
 
-    if (spawn_timer >= spawn_interval) {
+    if (spawn_timer >= current_spawn_interval) { // 使用调整后的间隔
         spawn_timer = 0;
 
-        // 随机决定是否生成僵尸
-        std::random_device rd;
-        std::mt19937 gen(rd());
-        std::uniform_real_distribution<> dis(0, 1);
-
-        if (dis(gen) < spawn_chance) {
+        std::uniform_real_distribution<> dis_chance(0.0, 1.0);
+        if (dis_chance(rng) < spawn_chance) {
             // 随机决定生成哪种僵尸
-            std::uniform_int_distribution<> type_dis(0, 2);
-            int zombie_type = type_dis(gen);
+            std::uniform_int_distribution<> type_dis(0, 2); // 0: Normal, 1: Cone, 2: Bucket
+            int zombie_type = type_dis(rng);
 
-            // 在生成位置附近随机偏移一点，使僵尸不会完全重叠
-            POINT spawn_pos = spawn_position;
-            std::uniform_int_distribution<> offset_dis(-50, 50);
-            spawn_pos.y += offset_dis(gen);
+            // 从墓碑列表中随机选择一个生成位置
+            std::uniform_int_distribution<> pos_dis(0, spawn_positions.size() - 1);
+            POINT base_spawn_pos = spawn_positions[pos_dis(rng)];
+
+            // 在选定墓碑位置附近随机偏移一点
+            POINT spawn_pos = base_spawn_pos;
+            std::uniform_int_distribution<> offset_dis(-10, 10); // 较小的偏移，因为是基于墓碑精确位置
+            spawn_pos.y += offset_dis(rng);
+            // 可以选择也对x进行偏移
+            // spawn_pos.x += offset_dis(rng);
+
 
             switch (zombie_type) {
             case 0:
@@ -267,10 +322,9 @@ Zombie* ZombieSpawner::Update(int delta) {
             case 2:
                 return new BucketZombie(spawn_pos);
             default:
-                return new NormalZombie(spawn_pos);
+                return new NormalZombie(spawn_pos); // 默认情况
             }
         }
     }
-
     return nullptr;
 }

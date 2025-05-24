@@ -5,6 +5,7 @@
 #include "Plant.h"
 #include "BrainBase.h"
 #include <vector>
+#include <random> // 需要包含 <random> 以使用 std::mt19937 和 std::uniform_int_distribution
 
 // 前向声明
 class Plant;
@@ -56,21 +57,26 @@ public:
 // ZombieSpawner类 - 负责生成僵尸
 class ZombieSpawner {
 private:
-    POINT spawn_position;    // 僵尸生成位置（墓碑位置）
-    int spawn_interval;      // 生成间隔（毫秒）
-    int spawn_timer;         // 生成计时器
-    double spawn_chance;     // 生成概率
+    std::vector<POINT> spawn_positions; // 修改为存储多个墓碑位置
+    int base_spawn_interval;          // 基础生成间隔
+    int current_spawn_interval;       // 当前实际的生成间隔
+    int spawn_timer;                  // 生成计时器
+    double spawn_chance;              // 生成概率
+    std::mt19937 rng;                 // 随机数生成器
 
 public:
-    ZombieSpawner(POINT pos, int interval = 1000, double chance = 0.3);
+    ZombieSpawner(const std::vector<POINT>& initial_spawn_positions, int base_interval = 1000, double chance = 0.3);
+
+    // 更新墓碑位置
+    void UpdateSpawnPositions(const std::vector<POINT>& new_spawn_positions);
 
     // 更新并可能生成新僵尸
     Zombie* Update(int delta);
-
-    // 设置生成参数
-    void SetSpawnInterval(int interval) { spawn_interval = interval; }
+	// 用于修改生成概率
     void SetSpawnChance(double chance) { spawn_chance = chance; }
 };
+    
+
 
 // 普通僵尸类
 class NormalZombie : public Zombie {
