@@ -144,6 +144,7 @@
     <ClInclude Include="Plant.h" />
     <ClInclude Include="SpecificPlants.h" />
     <ClInclude Include="Sun.h" />
+    <ClInclude Include="tombstone.h" />
     <ClInclude Include="Zombie.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

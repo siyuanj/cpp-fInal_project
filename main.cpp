@@ -16,6 +16,7 @@
 #include "Sun.h"             // 阳光系统
 #include "Zombie.h"          // 僵尸系统
 #include "BrainBase.h"       // 大脑基地类
+#include "tombstone.h"       // 墓碑类
 
 // 链接Windows图像处理库，用于支持透明图片
 #pragma comment(lib, "MSIMG32.LIB")
@@ -28,14 +29,15 @@ int sun_count = 200;                  // 初始阳光数量
 #define WIDTH 1280                   // 窗口宽度
 #define HEIGHT 720                   // 窗口高度
 
-
-
-
 // 创建全局的玩家动画图集对象
-Atlas* atlas_player_left = new Atlas(_T("img/player_left_%d.png"), 6);   // 左向动画帧
-Atlas* atlas_player_right = new Atlas(_T("img/player_right_%d.png"), 6);  // 右向动画帧
+Atlas* atlas_player_left;
+Atlas* atlas_player_right;
 
-
+// 预定义的tombstone位置
+struct TombstonePosition {
+    int x, y;
+    TombstonePosition(int px, int py) : x(px), y(py) {}
+};
 
 // 游戏状态枚举
 enum GameState {
@@ -47,11 +49,6 @@ enum GameState {
     GAME_OVER
 };
 
-// 预定义的tombstone位置
-struct TombstonePosition {
-    int x, y;
-    TombstonePosition(int px, int py) : x(px), y(py) {}
-};
 // 检查点是否在矩形内
 bool isPointInRect(int px, int py, int x, int y, int width, int height) {
     return px >= x && px <= x + width && py >= y && py <= y + height;
@@ -86,6 +83,10 @@ int main() {
     settextstyle(&font);                        // 应用字体设置
     setbkmode(TRANSPARENT);                     // 文字背景透明
 
+    // 初始化全局 Atlas 对象
+    atlas_player_left = new Atlas(_T("img/player_left_%d.png"), 6);   // 左向动画帧
+    atlas_player_right = new Atlas(_T("img/player_right_%d.png"), 6);  // 右向动画帧
+
     // 创建玩家动画对象
     Animation* anim_player_left = new Animation(atlas_player_left, 45);   // 左向动画
     Animation* anim_player_right = new Animation(atlas_player_right, 45); // 右向动画
@@ -96,32 +97,30 @@ int main() {
     Atlas* button1Atlas = nullptr;
     Atlas* button2Atlas = nullptr;
     Atlas* button3Atlas = nullptr;
-    Atlas* tombstoneAtlas = nullptr;
     Atlas* brainBaseAtlas = nullptr;
-	Atlas* pauseButtonAtlas = nullptr;
+    Atlas* pauseButtonAtlas = nullptr;
     Atlas* sun_back = nullptr;
+
+    POINT tombstone_pos = { 1000, 50 }; // 初始墓碑位置
 
     backgroundAtlas = new Atlas(_T("img/background.png"));// 背景
     beginButtonAtlas = new Atlas(_T("img/begin_idle.png"));// 开始按键
     button1Atlas = new Atlas(_T("img/botton_1.png"));// 选择墓碑数量1按键
     button2Atlas = new Atlas(_T("img/botton_2.png"));// 选择墓碑数量2按键
     button3Atlas = new Atlas(_T("img/botton_3.png"));// 选择墓碑数量3按键
-    tombstoneAtlas = new Atlas(_T("img/tombstone.png"));// 墓碑
     brainBaseAtlas = new Atlas(_T("img/brain_base.png"));// 大脑基地
     pauseButtonAtlas = new Atlas(_T("img/pause_idle.png"));// 暂停按键
-	sun_back = new Atlas(_T("img/sun_back.png"));// 阳光栏
+    sun_back = new Atlas(_T("img/sun_back.png"));// 阳光栏
 
     ExMessage msg;              // 消息结构体，用于处理用户输入
-
-
 
     // 初始化游戏状态和变量
     GameState gameState = START_SCREEN;
     int lastTime = GetTickCount();
     bool running = true;
-    int selectedZombieCount = 0;
-    std::vector<TombstonePosition> tombstonePositions;
-    TombstonePosition basePosition(-1, -1);
+    int selectedZombieCount = 0;// 选择的墓碑数量
+    std::vector<tombstone*> tombstones; // 修改为存储tombstone指针
+    TombstonePosition basePosition(-1, -1);// 基地位置，初始为无效值
     // 预定义的tombstone生成位置
     std::vector<TombstonePosition> possibleTombstonePositions = {
         TombstonePosition(100, 100),
@@ -134,10 +133,6 @@ int main() {
         TombstonePosition(600, 450),
         TombstonePosition(1000, 400)
     };
-    
-
-
-
 
     // 创建游戏对象
     BrainBase* brain = new BrainBase();    // 创建大脑基地
@@ -151,13 +146,10 @@ int main() {
     bool moving_left = false;   // 向左移动标志
     bool moving_right = false;  // 向右移动标志
 
-
     // 初始化僵尸系统
-    POINT tombstone_pos = { 1000, 50 };        // 设置墓碑（僵尸生成点）位置
     ZombieSpawner spawner(tombstone_pos);      // 创建僵尸生成器
     std::vector<Zombie*> zombies;              // 僵尸容器
 
-  
     // 主游戏循环
     while (running) {
         DWORD startTime = GetTickCount(); // 记录帧开始时间
@@ -209,16 +201,22 @@ int main() {
                     }
 
                     if (selectedZombieCount > 0) {
-                        tombstonePositions.clear();  // 清空之前的墓碑位置
+                        // 清理旧的tombstone对象
+                        for (auto t : tombstones) {
+                            delete t;
+                        }
+                        tombstones.clear();  // 清空之前的墓碑
                         std::vector<int> indices;
                         for (int i = 0; i < possibleTombstonePositions.size(); i++) {
                             indices.push_back(i);  // 生成索引列表 [0, 1, 2, ..., N-1]
                         }
-                        std::shuffle(indices.begin(), indices.end(),g);  // 随机打乱索引
+                        std::shuffle(indices.begin(), indices.end(), g);  // 随机打乱索引
 
                         // 根据选择的僵尸数量，从打乱的索引中选取对应数量的位置
                         for (int i = 0; i < selectedZombieCount; i++) {
-                            tombstonePositions.push_back(possibleTombstonePositions[indices[i]]);
+                            // 创建tombstone对象并添加到容器中
+                            POINT p = { possibleTombstonePositions[indices[i]].x, possibleTombstonePositions[indices[i]].y };
+                            tombstones.push_back(new tombstone(p));
                         }
                         gameState = PLACE_BASE;  // 进入放置基地状态
                     }
@@ -230,9 +228,10 @@ int main() {
                 if (msg.message == WM_LBUTTONDOWN) {
                     // 检查点击位置是否与tombstone重叠
                     bool validPosition = true;
-                    for (const auto& tomb : tombstonePositions) {
+                    for (const auto& tomb : tombstones) { // 修改为遍历tombstone对象
+                        POINT tombPos = tomb->getPosition(); // 获取tombstone位置
                         // 检查点击位置是否与tombstone重叠
-                        if (abs(msg.x - tomb.x) < 200 && abs(msg.y - tomb.y) < 200) {  // 避免重叠
+                        if (abs(msg.x - tombPos.x) < 200 && abs(msg.y - tombPos.y) < 200) {  // 避免重叠
                             validPosition = false;
                             break;
                         }
@@ -254,7 +253,7 @@ int main() {
             case PLAYING: {
                 // 游戏中输入处理
                 //由于这里机制复杂，因此相关逻辑放到阶段选择之后进行书写
-				//这里仅处理暂停
+                //这里仅处理暂停
                 if (msg.message == WM_KEYDOWN && msg.vkcode == VK_ESCAPE) {
                     gameState = PAUSED;
                 }
@@ -291,7 +290,7 @@ int main() {
                 case WM_LBUTTONDOWN:    // 鼠标左键点击事件
                     if (selected_plant > 0) {
                         POINT click_pos = { msg.x, msg.y };
-                        Plant* new_plant = nullptr;
+                        Plant* new_plant = nullptr; //new_plant为指针
                         int cost = 0;
 
                         // 根据选择创建对应的植物
@@ -299,7 +298,8 @@ int main() {
                         case 1: // 向日葵
                             cost = 50;
                             if (sun_count >= cost) {
-                                new_plant = new Sunflower(click_pos);
+                                new_plant = new Sunflower(click_pos);// 使指针指向新建的植物对象
+                                // new关键字的作用是动态分配内存并构造对象，使其不会在函数结束时被销毁
                                 sun_count -= cost;
                             }
                             break;
@@ -320,7 +320,7 @@ int main() {
                         }
 
                         if (new_plant) {
-                            plants.push_back(new_plant);
+                            plants.push_back(new_plant);// 新指针存入植物数组中
                         }
                     }
                     break;
@@ -344,18 +344,15 @@ int main() {
             }
         }
 
-		//***************************************阶段控制结束，开始后续按键处理*****************************************//
+        // *********************************按键处理结束****************************************//
 
-        if(gameState == PLAYING){
-            
-        }
-		// *********************************按键处理结束****************************************//
         BeginBatchDraw(); // 开始批量绘图，防止闪烁
         // 更新游戏状态
         DWORD delta = 1000 / 144;  // 计算帧间隔时间
+        //此处需要改进计数器系统进行优化，否则会导致玩家移动忽快忽慢
 
         // 更新玩家位置
-        //此处需要改进计数器系统进行优化，否则会导致玩家移动忽快忽慢
+
         if (moving_up) player_position.y -= PLAYER_SPEED;
         if (moving_down) player_position.y += PLAYER_SPEED;
         if (moving_left) player_position.x -= PLAYER_SPEED;
@@ -421,7 +418,7 @@ int main() {
 
             // 显示提示文字
             drawChineseText(WIDTH / 2 - 200, HEIGHT / 2 - 250, _T("选择僵尸生成点数量"), 40, RGB(255, 255, 255));
-            
+
             // 显示三个按钮
             int button1X = WIDTH / 2 - 375;
             int button2X = WIDTH / 2 - 125;
@@ -439,20 +436,13 @@ int main() {
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
             putimage_alpha(0, 0, sun_back->frame_list[0]);
             // 显示已选择的tombstone
-            for (const auto& tomb : tombstonePositions) {
-                putimage_alpha(tomb.x, tomb.y, tombstoneAtlas->frame_list[0]);
+            for (const auto& tomb : tombstones) {
+                tomb->draw();
             }
 
             // 显示提示文字
             drawChineseText(WIDTH / 2 - 150, 50, _T("点击选择基地位置"), 40, RGB(255, 255, 255));
 
-            // 显示鼠标位置的基地预览（半透明效果  可以通过调整alpha实现）
-            //ExMessage mouseMsg;
-            //if (peekmessage(&mouseMsg, EX_MOUSE)) {
-            //简单预览，显示基地可能的位置
-            // 暂时不加，之后改进
-            //    drawChineseText(mouseMsg.x - 50, mouseMsg.y - 30, _T("基地"), 20, RGB(0, 255, 0));
-            //}
             break;
         }
         case PLAYING: {
@@ -461,8 +451,8 @@ int main() {
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
             putimage_alpha(0, 0, sun_back->frame_list[0]);
             // 显示tombstone
-            for (const auto& tomb : tombstonePositions) {
-                putimage_alpha(tomb.x, tomb.y, tombstoneAtlas->frame_list[0]);
+            for (const auto& tomb : tombstones) {
+                tomb->draw();
             }
 
             // 显示基地
@@ -526,15 +516,7 @@ int main() {
                 _stprintf_s(s, _T("Selected: %d"), selected_plant);
                 outtextxy(10, 10, s);
             }
-            
-            
-            
-            
-            
-            
-            
-            
-            
+
             break;
         }
         case PAUSED: {
@@ -542,11 +524,9 @@ int main() {
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
             putimage_alpha(0, 0, sun_back->frame_list[0]);
-            // 显示开始游戏按钮（使用图片）
-            
             // 显示游戏内容
-            for (const auto& tomb : tombstonePositions) {
-                putimage_alpha(tomb.x, tomb.y, tombstoneAtlas->frame_list[0]);
+            for (const auto& tomb : tombstones) {
+                tomb->draw();
             }
             if (basePosition.x >= 0 && basePosition.y >= 0) {
                 putimage_alpha(basePosition.x, basePosition.y, brainBaseAtlas->frame_list[0]);
@@ -558,13 +538,8 @@ int main() {
         }
         case GAME_OVER: {
             break;
-            }
-
-
         }
-        
-
-        
+        }
 
         FlushBatchDraw(); // 更新屏幕显示
 
@@ -574,8 +549,7 @@ int main() {
         if (delta_time < 1000 / 144) {
             Sleep(1000 / 144 - delta_time);
         }
-        }
-    
+    }
 
     // 清理资源
     // 清理僵尸
@@ -590,14 +564,27 @@ int main() {
     }
     plants.clear();
 
+    // 清理tombstones
+    for (auto tomb : tombstones) {
+        delete tomb;
+    }
+    tombstones.clear();
+
     // 清理其他资源
     delete brain;
     delete anim_player_left;
     delete anim_player_right;
     delete atlas_player_left;
     delete atlas_player_right;
+    delete backgroundAtlas;
+    delete beginButtonAtlas;
+    delete button1Atlas;
+    delete button2Atlas;
+    delete button3Atlas;
+    delete brainBaseAtlas;
+    delete pauseButtonAtlas;
+    delete sun_back;
 
     closegraph(); // 关闭图形窗口
     return 0;
-
-    }
+}
