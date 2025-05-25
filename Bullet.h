@@ -26,7 +26,8 @@ public:
     virtual ~Bullet();
     // 虚更新函数：每帧调用，用于更新子弹的状态（例如，位置）
     // delta为距离上一帧的时间间隔（毫秒）
-    virtual void Update(int delta, const std::vector<Zombie*>& all_zombies);
+    //virtual void Update(int delta, const std::vector<Zombie*>& all_zombies);
+    void Update(int delta);
     // 虚绘制函数：每帧调用，用于在屏幕上绘制子弹
     virtual void Draw();
 

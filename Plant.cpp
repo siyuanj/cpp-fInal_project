@@ -110,7 +110,7 @@ void AttackPlant::UpdateAttackLogic(int delta, std::vector<Zombie*>& zombies, st
                     target_zombie = zombie;
                 }
             }
-        }
+        }// 确定最近的僵尸
 
         if (target_zombie) {
             // 将目标僵尸传递给 Attack 方法

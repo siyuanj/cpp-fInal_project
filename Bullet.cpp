@@ -17,38 +17,71 @@ Bullet::~Bullet() {
     if (anim) delete anim;
 }
 
-void Bullet::Update(int delta, const std::vector<Zombie*>& all_zombies) {
+//void Bullet::Update(int delta, const std::vector<Zombie*>& all_zombies) {
+//
+//    if (!is_active) return;
+//
+//    // 索敌逻辑：从 all_zombies 中找到最近的存活僵尸
+//    Zombie* nearest_zombie = nullptr;
+//    //double min_dist_sq = std::numeric_limits<double>::max();//？？？
+//    double min_dist_sq = 1200;
+//    for (Zombie* zombie_ptr : all_zombies) {
+//        if (zombie_ptr && zombie_ptr->IsAlive()) {
+//            POINT zombie_pos = zombie_ptr->GetPosition();
+//            double dx_to_zombie = static_cast<double>(zombie_pos.x) - position.x;
+//            double dy_to_zombie = static_cast<double>(zombie_pos.y) - position.y;
+//            double dist_sq = dx_to_zombie * dx_to_zombie + dy_to_zombie * dy_to_zombie;
+//
+//            if (dist_sq < min_dist_sq) {
+//                min_dist_sq = dist_sq;
+//                nearest_zombie = zombie_ptr;
+//            }
+//        }
+//    }
+//
+//    if (nearest_zombie) {
+//        // 更新子弹的目标点为最近僵尸的位置
+//        target_position = nearest_zombie->GetPosition();
+//        // 可选: 调整 target_position 使其瞄准僵尸中心
+//        target_position.x += 72; // 假设 Zombie 类有这些常量
+//        target_position.y += 84;
+//    }
+//    // 如果没有找到存活的僵尸，子弹将继续飞向其上一个 target_position (即 initial_target_pos 或上一帧找到的僵尸位置)
+//
+//    // 子弹移动逻辑 (与你之前 Bullet.cpp 中的逻辑类似)
+//    double dx_to_target = static_cast<double>(target_position.x) - position.x;
+//    double dy_to_target = static_cast<double>(target_position.y) - position.y;
+//    double distance_to_target = std::sqrt(dx_to_target * dx_to_target + dy_to_target * dy_to_target);
+//
+//    double move_distance_this_frame = speed * (static_cast<double>(delta) / 1000.0);
+//
+//    if (distance_to_target <= move_distance_this_frame || distance_to_target == 0) {
+//        // 到达或超过目标点 (或者已经在目标点)
+//        // 对于追踪子弹，实际的“击中”由碰撞检测处理
+//        // 此处仅移动到目标点，如果目标是动态的，下一帧会重新计算
+//        if (distance_to_target > 0) { // 避免除以0，虽然前面已经检查了 distance_to_target == 0
+//            position.x += static_cast<long>((dx_to_target / distance_to_target) * move_distance_this_frame);
+//            position.y += static_cast<long>((dy_to_target / distance_to_target) * move_distance_this_frame);
+//        }
+//        // 如果希望子弹在到达静态目标点后消失，可以在这里设置 is_active = false
+//        // 但对于追踪移动目标，通常由碰撞或出界来使其失效
+//    }
+//    else {
+//        // 向目标点移动
+//        position.x += static_cast<long>((dx_to_target / distance_to_target) * move_distance_this_frame);
+//        position.y += static_cast<long>((dy_to_target / distance_to_target) * move_distance_this_frame);
+//    }
+//
+//    // 检查子弹是否飞出屏幕边界
+//    if (position.x > WIDTH || position.x < 0 || position.y > HEIGHT || position.y < 0) {
+//        is_active = false;
+//    }
+//}
 
+void Bullet::Update(int delta) {
     if (!is_active) return;
 
-    // 索敌逻辑：从 all_zombies 中找到最近的存活僵尸
-    Zombie* nearest_zombie = nullptr;
-    //double min_dist_sq = std::numeric_limits<double>::max();//？？？
-    double min_dist_sq = 1200;
-    for (Zombie* zombie_ptr : all_zombies) {
-        if (zombie_ptr && zombie_ptr->IsAlive()) {
-            POINT zombie_pos = zombie_ptr->GetPosition();
-            double dx_to_zombie = static_cast<double>(zombie_pos.x) - position.x;
-            double dy_to_zombie = static_cast<double>(zombie_pos.y) - position.y;
-            double dist_sq = dx_to_zombie * dx_to_zombie + dy_to_zombie * dy_to_zombie;
-
-            if (dist_sq < min_dist_sq) {
-                min_dist_sq = dist_sq;
-                nearest_zombie = zombie_ptr;
-            }
-        }
-    }
-
-    if (nearest_zombie) {
-        // 更新子弹的目标点为最近僵尸的位置
-        target_position = nearest_zombie->GetPosition();
-        // 可选: 调整 target_position 使其瞄准僵尸中心
-        target_position.x += 72; // 假设 Zombie 类有这些常量
-        target_position.y += 84;
-    }
-    // 如果没有找到存活的僵尸，子弹将继续飞向其上一个 target_position (即 initial_target_pos 或上一帧找到的僵尸位置)
-
-    // 子弹移动逻辑 (与你之前 Bullet.cpp 中的逻辑类似)
+    // 子弹移动逻辑
     double dx_to_target = static_cast<double>(target_position.x) - position.x;
     double dy_to_target = static_cast<double>(target_position.y) - position.y;
     double distance_to_target = std::sqrt(dx_to_target * dx_to_target + dy_to_target * dy_to_target);
@@ -57,14 +90,8 @@ void Bullet::Update(int delta, const std::vector<Zombie*>& all_zombies) {
 
     if (distance_to_target <= move_distance_this_frame || distance_to_target == 0) {
         // 到达或超过目标点 (或者已经在目标点)
-        // 对于追踪子弹，实际的“击中”由碰撞检测处理
-        // 此处仅移动到目标点，如果目标是动态的，下一帧会重新计算
-        if (distance_to_target > 0) { // 避免除以0，虽然前面已经检查了 distance_to_target == 0
-            position.x += static_cast<long>((dx_to_target / distance_to_target) * move_distance_this_frame);
-            position.y += static_cast<long>((dy_to_target / distance_to_target) * move_distance_this_frame);
-        }
-        // 如果希望子弹在到达静态目标点后消失，可以在这里设置 is_active = false
-        // 但对于追踪移动目标，通常由碰撞或出界来使其失效
+        position = target_position; // 直接移动到目标点
+        is_active = false;          // 子弹到达目标后失效
     }
     else {
         // 向目标点移动
@@ -73,12 +100,10 @@ void Bullet::Update(int delta, const std::vector<Zombie*>& all_zombies) {
     }
 
     // 检查子弹是否飞出屏幕边界
-    if (position.x > WIDTH || position.x < 0 || position.y > HEIGHT || position.y < 0) {
-        is_active = false;
-    }
+     if (position.x > 1280 || position.x < 0 || position.y > 720 || position.y < 0) {
+         is_active = false;
+     }
 }
-
-
 
 void Bullet::Draw() {
     if (is_active && anim) {
