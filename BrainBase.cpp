@@ -22,7 +22,7 @@ void BrainBase::TakeDamage(int damage) {
     hp -= damage;
     if (hp < 0) {
         hp = 0;
-        //is_alive = false;
+        is_alive = false;
     }
 }
 

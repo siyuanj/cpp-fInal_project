@@ -1,8 +1,11 @@
 #include "Plant.h"
+#include "Zombie.h"
 
 Plant::Plant(int init_hp, POINT pos, int init_cost, Atlas* atlas, int frame_interval)
     : hp(init_hp), max_hp(init_hp), position(pos), cost(init_cost), is_alive(true) {
+    
     anim = new Animation(atlas, frame_interval);
+	// 此处需要保证传入了非空的Atlas指针
 }
 
 Plant::~Plant() {
@@ -64,7 +67,7 @@ void Plant::Draw() {
             setfillcolor(health_color);
             solidrectangle(bar_bg_x, bar_bg_y, bar_bg_x + current_health_width, bar_bg_y + health_bar_height);
 
-            setlinecolor(BLACK);
+            setlinecolor(BLACK);// 血条边框
             rectangle(bar_bg_x, bar_bg_y, bar_bg_x + health_bar_width, bar_bg_y + health_bar_height);
         }
     }
@@ -77,12 +80,44 @@ AttackPlant::AttackPlant(int init_hp, POINT pos, int init_cost, Atlas* atlas,
     attack_power(power), attack_range(range),
     attack_interval(interval), attack_timer(0) {
 }
-
 void AttackPlant::Update(int delta) {
+    if (!is_alive) return; // 如果植物死亡，则不进行更新
+
+    //// 调用基类 Plant 的 Update 方法来处理通用逻辑（例如动画更新）
+    //Plant::Update(delta);
+
+    //// AttackPlant 特有的非攻击逻辑更新可以在这里添加，
+    ////对于 AttackPlant，这个 Update(int) 可能只需要调用基类的 Update。
+}
+
+void AttackPlant::UpdateAttackLogic(int delta, std::vector<Zombie*>& zombies, std::vector<Bullet*>& bullets) {
+    if (!is_alive) return;
     attack_timer += delta;
+
     if (attack_timer >= attack_interval) {
-        Attack();
-        attack_timer = 0;
+        Zombie* target_zombie = nullptr;
+        double min_dist_sq = attack_range * attack_range; // 使用距离的平方以避免开方运算
+
+        for (Zombie* zombie : zombies) {
+            if (zombie && zombie->IsAlive()) {
+                POINT zombie_pos = zombie->GetPosition();
+                double dist_x = static_cast<double>(position.x) - zombie_pos.x;
+                double dist_y = static_cast<double>(position.y) - zombie_pos.y;
+                double current_dist_sq = dist_x * dist_x + dist_y * dist_y;
+
+                if (current_dist_sq < min_dist_sq) {
+                    min_dist_sq = current_dist_sq;
+                    target_zombie = zombie;
+                }
+            }
+        }
+
+        if (target_zombie) {
+            // 将目标僵尸传递给 Attack 方法
+            Attack(target_zombie, bullets);
+            attack_timer = 0;     // 重置攻击计时器
+        }
+        // 如果没有目标，则不攻击，计时器会继续累加或按需重置
     }
 }
 
@@ -94,7 +129,8 @@ DefensePlant::DefensePlant(int init_hp, POINT pos, int init_cost, Atlas* atlas,
 }
 
 void DefensePlant::Update(int delta) {
-    // Basic update logic for defense plants
+    if (!is_alive) return;
+    // 防御植物通常没有主动的攻击行为，其主要逻辑在 TakeDamage 中
 }
 
 void DefensePlant::TakeDamage(int damage) {
@@ -115,9 +151,10 @@ ResourcePlant::ResourcePlant(int init_hp, POINT pos, int init_cost, Atlas* atlas
 }
 
 void ResourcePlant::Update(int delta) {
+    if (!is_alive) return;
     resource_timer += delta;
     if (resource_timer >= resource_rate) {
-        GenerateResource();
-        resource_timer = 0;
+        GenerateResource(); // 调用派生类实现的具体资源生成方法
+        resource_timer = 0; // 重置计时器
     }
 }
