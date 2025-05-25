@@ -60,9 +60,9 @@ void Sunflower::Draw() {
 
 Peashooter::Peashooter(POINT pos)
     : AttackPlant(100, pos, 100, new Atlas(_T("img/peashooter_%d.png"), 12),
-        100, 20, 1200, 800) {
+        100, 20, 500, 800) {
     // attack_power = 20 (伤害)
-    // attack_range = 450 (攻击距离，像素)
+    // attack_range = 500 (攻击距离，像素)
     // attack_interval = 1500 (攻击间隔，毫秒)
 }
 
@@ -73,8 +73,8 @@ void Peashooter::Attack(Zombie* target_zombie, std::vector<Bullet*>& bullets) {
 
     // 1. 确定子弹发射位置
     POINT bullet_start_pos = position;
-    bullet_start_pos.x += 69;
-    bullet_start_pos.y += 13;
+    bullet_start_pos.x += 39;
+    bullet_start_pos.y += 3;
 
     // 2. 创建一颗新的子弹，并设置其追踪目标
     double bullet_speed = 100.0;

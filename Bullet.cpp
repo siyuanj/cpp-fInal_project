@@ -86,7 +86,7 @@ void Bullet::Update(int delta) {
     double dy_to_target = static_cast<double>(target_position.y) - position.y;
     double distance_to_target = std::sqrt(dx_to_target * dx_to_target + dy_to_target * dy_to_target);
 
-    double move_distance_this_frame = speed * (static_cast<double>(delta) / 1000.0);
+    double move_distance_this_frame = speed * (static_cast<double>(delta) / 50.0);
 
     if (distance_to_target <= move_distance_this_frame || distance_to_target == 0) {
         // 到达或超过目标点 (或者已经在目标点)
