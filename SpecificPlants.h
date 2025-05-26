@@ -33,6 +33,12 @@ public:
 
 };
 
+class Repeater : public AttackPlant {
+public:
+    Repeater(POINT pos);
+    void Attack(Zombie* target_zombie, std::vector<Bullet*>& bullets); // ·¢ÉäÁ½¿Å×Óµ¯
+};
+
 class WallNut : public DefensePlant {
 public:
     WallNut(POINT pos);

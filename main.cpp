@@ -287,6 +287,7 @@ int main() {
                     case '2': selected_plant = 2; break;  // 选择豌豆射手
                     case '3': selected_plant = 3; break;  // 选择坚果墙
                     case '4': selected_plant = 4; break;  // 选择高坚果
+                    case '5': selected_plant = 5; break;  // 选择双发射手
                     case 'W': case VK_UP: moving_up = true; break;
                     case 'S': case VK_DOWN: moving_down = true; break;
                     case 'A': case VK_LEFT:
@@ -303,7 +304,7 @@ int main() {
 
                 case WM_KEYUP:      // 按键释放事件
                     switch (msg.vkcode) {
-                    case '1': case '2': case '3': case '4':selected_plant = 0; break;
+                    case '1': case '2': case '3': case '4': case '5':selected_plant = 0; break;
                     case 'W': case VK_UP: moving_up = false; break;
                     case 'S': case VK_DOWN: moving_down = false; break;
                     case 'A': case VK_LEFT: moving_left = false; break;
@@ -348,7 +349,15 @@ int main() {
                                 sun_count -= cost;
                             }
                             break;
+                        case 5: // Repeater
+                            cost = 200; // Repeater 的阳光消耗
+                            if (sun_count >= cost) {
+                                new_plant = new Repeater(click_pos);
+                                sun_count -= cost;
+                            }
+                            break;
                         }
+
 
                         if (new_plant) {
                             plants.push_back(new_plant);// 新指针存入植物数组中

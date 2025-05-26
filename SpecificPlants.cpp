@@ -88,6 +88,48 @@ void Peashooter::Attack(Zombie* target_zombie, std::vector<Bullet*>& bullets) {
     // 音效...
 }
 
+Repeater::Repeater(POINT pos)
+    : AttackPlant(100, pos, 200, new Atlas(_T("img/repeater_%d.png"), 15),
+        100, 20, 500, 800) {
+    // 参数说明 (基于Peashooter的AttackPlant构造函数推断):
+    // HP: 100
+    // 位置: pos
+    // 阳光花费: 200 (Repeater通常比Peashooter贵)
+    // 图像: new Atlas(_T("img/repeater_%d.png"), 15) (15帧图像)
+    // frame_interval: 100 (与Peashooter保持一致)
+    // 攻击力 (每颗子弹): 20
+    // 攻击范围: 500
+    // 攻击间隔 (发射一对子弹的间隔): 800ms 
+    // 你可以根据游戏平衡调整这些数值
+}
+
+void Repeater::Attack(Zombie* target_zombie, std::vector<Bullet*>& bullets) {
+    if (!target_zombie) { // 如果没有目标，则不攻击
+        return;
+    }
+
+    double bullet_speed = 100.0; // 子弹速度，与Peashooter一致
+
+    // 第一颗子弹
+    POINT bullet_start_pos1 = position;
+    bullet_start_pos1.x += 39; // 主要发射点，可以根据Repeater的图像调整
+    bullet_start_pos1.y += 3;  // Y轴偏移，与Peashooter一致
+    NormalBullet* new_bullet1 = new NormalBullet(bullet_start_pos1, target_zombie->GetPosition(), bullet_speed, attack_power);
+    bullets.push_back(new_bullet1);
+
+    // 第二颗子弹
+    // 为了体现"连续"，第二颗子弹可以从略微不同的位置发射，或者在同一位置紧接着创建
+    // 从一个稍微靠前（或旁边）的位置发射，以示区别
+    POINT bullet_start_pos2 = position;
+    bullet_start_pos2.x += 25; // 第二个发射点X偏移 (例如，比第一颗子弹靠左14像素: 39-14=25)
+    bullet_start_pos2.y += 3;  // Y轴偏移，与Peashooter一致
+    NormalBullet* new_bullet2 = new NormalBullet(bullet_start_pos2, target_zombie->GetPosition(), bullet_speed, attack_power);
+    bullets.push_back(new_bullet2);
+
+    // 可在此处添加发射音效等
+}
+
+
 WallNut::WallNut(POINT pos)
     : DefensePlant(400, pos, 50, new Atlas(_T("img/wallnut_%d.png"), 15),
         150, 20, true) {
