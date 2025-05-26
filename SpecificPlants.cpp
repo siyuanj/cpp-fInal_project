@@ -95,7 +95,8 @@ WallNut::WallNut(POINT pos)
 // 属性分别为： 生命值(400), 位置(pos), 宽度(50), 图像(new Atlas("img/wallnut_%d.png", 15)),
 // 攻击间隔(150), 攻击力(20), 是否可以格挡(true)
 //因为格挡比攻击还高，所以杀不死
+
 TallWallNut :: TallWallNut(POINT pos)
-    : DefensePlant(1000, pos, 50, new Atlas(_T("img/wallnut_%d.png"), 15),
+    : DefensePlant(1000, pos, 50, new Atlas(_T("img/TallWallNut_%d.png"), 14),
         150, 20, true) {
 }

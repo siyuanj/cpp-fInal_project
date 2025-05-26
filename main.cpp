@@ -286,6 +286,7 @@ int main() {
                     case '1': selected_plant = 1; break;  // 选择向日葵
                     case '2': selected_plant = 2; break;  // 选择豌豆射手
                     case '3': selected_plant = 3; break;  // 选择坚果墙
+                    case '4': selected_plant = 4; break;  // 选择高坚果
                     case 'W': case VK_UP: moving_up = true; break;
                     case 'S': case VK_DOWN: moving_down = true; break;
                     case 'A': case VK_LEFT:
@@ -302,7 +303,7 @@ int main() {
 
                 case WM_KEYUP:      // 按键释放事件
                     switch (msg.vkcode) {
-                    case '1': case '2': case '3': selected_plant = 0; break;
+                    case '1': case '2': case '3': case '4':selected_plant = 0; break;
                     case 'W': case VK_UP: moving_up = false; break;
                     case 'S': case VK_DOWN: moving_down = false; break;
                     case 'A': case VK_LEFT: moving_left = false; break;
@@ -337,6 +338,13 @@ int main() {
                             cost = 50;
                             if (sun_count >= cost) {
                                 new_plant = new WallNut(click_pos);
+                                sun_count -= cost;
+                            }
+                            break;
+                        case 4: // 高坚果
+                            cost = 125; // 假设高坚果的阳光消耗为125，你可以根据需要修改
+                            if (sun_count >= cost) {
+                                new_plant = new TallWallNut(click_pos);
                                 sun_count -= cost;
                             }
                             break;
