@@ -116,7 +116,8 @@ void Zombie::Update(int delta, const std::vector<Plant*>& plants, BrainBase* bra
     FindNearestTarget(plants, brain);// 随时调整目标
 
     // 计算移动距离
-    double move_distance = speed * delta / 100.0;
+    double move_distance = speed * delta / 100.0;//限制于画图函数，没办法更慢
+ 
 	// delta为时间增量（毫秒），speed为速度（像素/0.1秒），move_distance为移动距离（像素）
     // speed*10  像素/秒
     // 如果没有目标，保持默认向左移动
@@ -227,13 +228,25 @@ void Zombie::Draw() {
 
 // 普通僵尸实现
 NormalZombie::NormalZombie(POINT init_pos)
-    : Zombie(100,                // 生命值
+    : Zombie(150,                // 生命值
         10,                  // 攻击力
         init_pos,
         3,              // 速度提高到100
         new Atlas(_T("img/normal_zombies_%d.png"), 22),
         100,
         1000) {
+}
+
+// 精英僵尸实现
+EliteZombie::EliteZombie(POINT init_pos)
+    : Zombie(450,                // 生命值 (例如: 普通僵尸的2.5倍)
+        25,                  // 攻击力 (例如: 普通僵尸的2.5倍)
+        init_pos,            // 初始位置
+        3,                 // 移动速度 
+        new Atlas(_T("img/elite_zombie_%d.png"), 23), // 图像资源路径和帧数
+        100,                 // 动画帧间隔 (与普通僵尸一致)
+        1000) {              // 攻击间隔 (与普通僵尸一致)
+    // EliteZombie 特有的初始化代码可以放在这里 (如果需要)
 }
 
 // 有防具僵尸基类实现
@@ -349,7 +362,7 @@ void ArmoredZombie::Draw() {
 
 // 路障僵尸实现
 ConeZombie::ConeZombie(POINT init_pos)
-    : ArmoredZombie(100,
+    : ArmoredZombie(200,
         80,
         init_pos,
         3.0,               // 速度提高到80
@@ -361,7 +374,7 @@ ConeZombie::ConeZombie(POINT init_pos)
 
 // 铁桶僵尸实现
 BucketZombie::BucketZombie(POINT init_pos)
-    : ArmoredZombie(100,
+    : ArmoredZombie(200,
         150,
         init_pos,
         3.0,               // 速度提高到60
@@ -438,7 +451,7 @@ Zombie* ZombieSpawner :: Update(int delta) {
         std::uniform_real_distribution<> dis_chance(0.0, 1.0);
         if (dis_chance(rng) < spawn_chance) {
             // 随机决定生成哪种僵尸
-            std::uniform_int_distribution<> type_dis(0, 2); // 0: Normal, 1: Cone, 2: Bucket
+            std::uniform_int_distribution<> type_dis(0, 3); // 0: Normal, 1: Cone, 2: Bucket, 3: Elite
             int zombie_type = type_dis(rng);
 
             // 从墓碑列表中随机选择一个生成位置
@@ -460,6 +473,8 @@ Zombie* ZombieSpawner :: Update(int delta) {
                 return new ConeZombie(spawn_pos);
             case 2:
                 return new BucketZombie(spawn_pos);
+            case 3: // 新增精英僵尸的生成
+                return new EliteZombie(spawn_pos);
             default:
                 return new NormalZombie(spawn_pos); // 默认情况
             }

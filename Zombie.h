@@ -86,6 +86,12 @@ public:
     NormalZombie(POINT init_pos);
 };
 
+// 精英僵尸
+class EliteZombie : public Zombie {
+public:
+    EliteZombie(POINT init_pos);
+};
+
 // 有防具僵尸基类
 class ArmoredZombie : public Zombie {
 protected:
