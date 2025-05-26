@@ -100,6 +100,7 @@ int main() {
     Atlas* brainBaseAtlas = nullptr;
     Atlas* pauseButtonAtlas = nullptr;
     Atlas* sun_back = nullptr;
+    Atlas* seedbank = nullptr;
     Atlas* gameover_botton = nullptr;
 
     POINT tombstone_pos = { 1000, 50 }; // 初始墓碑位置
@@ -111,7 +112,8 @@ int main() {
     button3Atlas = new Atlas(_T("img/botton_3.png"));// 选择墓碑数量3按键
     brainBaseAtlas = new Atlas(_T("img/brain_base.png"));// 大脑基地
     pauseButtonAtlas = new Atlas(_T("img/pause_idle.png"));// 暂停按键
-    sun_back = new Atlas(_T("img/sun_back.png"));// 阳光栏
+    //sun_back = new Atlas(_T("img/sun_back.png"));// 阳光栏
+    seedbank = new Atlas(_T("img/seedbank_plant.png"));// 种子银行
     gameover_botton = new Atlas(_T("img/gameover_eng.png"));// 阳光栏
 
     ExMessage msg;              // 消息结构体，用于处理用户输入
@@ -370,7 +372,7 @@ int main() {
             case PAUSED: {
                 // 暂停状态输入处理
                 if (msg.message == WM_KEYDOWN && msg.vkcode == VK_ESCAPE) {
-                    gameState = GAME_OVER;
+                    running = false;
                 }
                 else if (msg.message == WM_LBUTTONDOWN) {
                     gameState = PLAYING;
@@ -508,7 +510,8 @@ int main() {
             cleardevice();
             // 显示背景
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
-            putimage_alpha(0, 0, sun_back->frame_list[0]);
+            
+            putimage_alpha(0, 0, seedbank->frame_list[0]);
 
             // 显示开始游戏按钮（使用图片）
             int buttonX = WIDTH / 2 - 100;
@@ -520,7 +523,7 @@ int main() {
             // 绘制僵尸数量选择界面
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
-            putimage_alpha(0, 0, sun_back->frame_list[0]);
+            putimage_alpha(0, 0, seedbank->frame_list[0]);
 
             // 显示提示文字
             drawChineseText(WIDTH / 2 - 200, HEIGHT / 2 - 250, _T("选择僵尸生成点数量"), 40, RGB(255, 255, 255));
@@ -540,7 +543,7 @@ int main() {
             // 绘制基地放置界面
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
-            putimage_alpha(0, 0, sun_back->frame_list[0]);
+            putimage_alpha(0, 0, seedbank->frame_list[0]);
             // 显示已选择的tombstone
             for (const auto& tomb : tombstones) {
                 tomb->draw();
@@ -555,7 +558,7 @@ int main() {
             // 绘制游戏界面
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
-            putimage_alpha(0, 0, sun_back->frame_list[0]);
+            putimage_alpha(0, 0, seedbank->frame_list[0]);
             // 显示tombstone
             for (const auto& tomb : tombstones) {
                 tomb->draw();
@@ -586,18 +589,19 @@ int main() {
             settextcolor(RGB(0, 0, 0));
             TCHAR sun_text[20];
             _stprintf_s(sun_text, _T("%d"), sun_count);
-            RECT text_rect = { 68, 2, 120, 32 };
+            RECT text_rect = { 20, 60, 63, 80 };
+
             drawtext(sun_text, &text_rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 
             // 大脑血量
             TCHAR hp_text[20];
             _stprintf_s(hp_text, _T("大脑血量: %d"), brain->GetHP());
-            outtextxy(10, 50, hp_text);
+            outtextxy(1100, 50, hp_text);
 
             // 僵尸数量（调试信息）
             TCHAR zombie_text[20];
             _stprintf_s(zombie_text, _T("僵尸数量: %d"), (int)zombies.size());
-            outtextxy(10, 90, zombie_text);
+            outtextxy(1100, 90, zombie_text);
 
             // 绘制玩家角色
             if (moving_left || moving_right || moving_up || moving_down) {
@@ -625,14 +629,39 @@ int main() {
                 _stprintf_s(s, _T("Selected: %d"), selected_plant);
                 outtextxy(10, 10, s);
             }
+            if (selected_plant >= 1 && selected_plant <= 5) {
+                setlinestyle(PS_SOLID, 3);
+                setlinecolor(GREEN); // 设置边框颜色为白色
 
+                double rect_width_float = 49.89;
+                double rect_height_float = 67.66;
+                double top_y_float = 9.83;
+                double left_x_float = 0.0;
+
+                switch (selected_plant) {
+                case 1: left_x_float = 85.80; break;
+                case 2: left_x_float = 151.56; break;
+                case 3: left_x_float = 216.95; break;
+                case 4: left_x_float = 283.47; break;
+                case 5: left_x_float = 350.00; break;
+                }
+
+                // 计算矩形的整数坐标
+                // EasyX的rectangle函数需要整数坐标
+                int r_left = static_cast<int>(left_x_float);
+                int r_top = static_cast<int>(top_y_float);
+                int r_right = static_cast<int>(left_x_float + rect_width_float);
+                int r_bottom = static_cast<int>(top_y_float + rect_height_float);
+
+                rectangle(r_left, r_top, r_right, r_bottom);
+            }
             break;
         }
         case PAUSED: {
             // 绘制暂停界面
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
-            putimage_alpha(0, 0, sun_back->frame_list[0]);
+            putimage_alpha(0, 0, seedbank->frame_list[0]);
             // 显示游戏内容
             for (const auto& tomb : tombstones) {
                 tomb->draw();
@@ -640,15 +669,15 @@ int main() {
             if (basePosition.x >= 0 && basePosition.y >= 0) {
                 putimage_alpha(basePosition.x, basePosition.y, brainBaseAtlas->frame_list[0]);
             }
-            int buttonX = WIDTH / 2 - 100;
-            int buttonY = HEIGHT / 2 + 50;
+            int buttonX = 390;
+            int buttonY = 110;
             putimage_alpha(buttonX, buttonY, pauseButtonAtlas->frame_list[0]);
             break;
         }
         case GAME_OVER: {
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
-            putimage_alpha(0, 0, sun_back->frame_list[0]);
+            putimage_alpha(0, 0, seedbank->frame_list[0]);
             int buttonX = 390;
             int buttonY = 110;
 
@@ -707,7 +736,7 @@ int main() {
     delete button3Atlas;
     delete brainBaseAtlas;
     delete pauseButtonAtlas;
-    delete sun_back;
+    delete seedbank;
 
     closegraph(); // 关闭图形窗口
     return 0;

@@ -2,7 +2,7 @@
 #include <cmath>
 
 Sun::Sun(POINT pos, Atlas* atlas) : position(pos), is_active(true) {
-    target = { 68, 2 };
+    target = { 10, 10 };
     anim = new Animation(atlas, 50);
 }
 
