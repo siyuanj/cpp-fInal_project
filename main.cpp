@@ -21,6 +21,7 @@
 // 链接Windows图像处理库，用于支持透明图片
 #pragma comment(lib, "MSIMG32.LIB")
 
+
 // 全局常量和变量
 const double PI = 3.1415926;         // 圆周率常量
 double PLAYER_SPEED = 5.0;           // 玩家移动速度

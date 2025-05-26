@@ -73,7 +73,7 @@ void Peashooter::Attack(Zombie* target_zombie, std::vector<Bullet*>& bullets) {
 
     // 1. 确定子弹发射位置
     POINT bullet_start_pos = position;
-    bullet_start_pos.x += 39;
+    bullet_start_pos.x += 19;
     bullet_start_pos.y += 3;
 
     // 2. 创建一颗新的子弹，并设置其追踪目标
@@ -81,7 +81,10 @@ void Peashooter::Attack(Zombie* target_zombie, std::vector<Bullet*>& bullets) {
     // 假设你的 Bullet 构造函数或一个设置目标的方法可以接收 Zombie*
     // 你可能需要修改 Bullet 或 NormalBullet 的构造函数来接收 Zombie* target
     // 或者添加一个 SetTarget(Zombie* target) 方法
-    NormalBullet* new_bullet = new NormalBullet(bullet_start_pos, target_zombie->GetPosition(), bullet_speed, attack_power);
+    POINT tar_pos = target_zombie->GetPosition();
+    tar_pos.x += 84;
+    tar_pos.y += 84;
+    NormalBullet* new_bullet = new NormalBullet(bullet_start_pos, tar_pos, bullet_speed, attack_power);
     // new_bullet->SetTarget(target_zombie); // 如果你的 Bullet 类有这样的方法
 
     bullets.push_back(new_bullet);
@@ -112,7 +115,7 @@ void Repeater::Attack(Zombie* target_zombie, std::vector<Bullet*>& bullets) {
 
     // 第一颗子弹
     POINT bullet_start_pos1 = position;
-    bullet_start_pos1.x += 39; // 主要发射点，可以根据Repeater的图像调整
+    bullet_start_pos1.x += 19; // 主要发射点，可以根据Repeater的图像调整
     bullet_start_pos1.y += 3;  // Y轴偏移，与Peashooter一致
     NormalBullet* new_bullet1 = new NormalBullet(bullet_start_pos1, target_zombie->GetPosition(), bullet_speed, attack_power);
     bullets.push_back(new_bullet1);
@@ -121,10 +124,10 @@ void Repeater::Attack(Zombie* target_zombie, std::vector<Bullet*>& bullets) {
     // 为了体现"连续"，第二颗子弹可以从略微不同的位置发射，或者在同一位置紧接着创建
     // 从一个稍微靠前（或旁边）的位置发射，以示区别
     POINT bullet_start_pos2 = position;
-    bullet_start_pos2.x += 25; // 第二个发射点X偏移 (例如，比第一颗子弹靠左14像素: 39-14=25)
+    bullet_start_pos2.x += 0; // 第二个发射点X偏移 (例如，比第一颗子弹靠左14像素: 39-14=25)
     bullet_start_pos2.y += 3;  // Y轴偏移，与Peashooter一致
     NormalBullet* new_bullet2 = new NormalBullet(bullet_start_pos2, target_zombie->GetPosition(), bullet_speed, attack_power);
-    bullets.push_back(new_bullet2);
+    bullets.push_back(new_bullet2); 
 
     // 可在此处添加发射音效等
 }

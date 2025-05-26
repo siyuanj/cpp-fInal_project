@@ -7,7 +7,7 @@
 // 基础僵尸类实现
 Zombie::Zombie(int init_hp, int init_attack_power, POINT init_pos, double init_speed,
     Atlas * atlas, int frame_interval, int atk_interval)
-    : hp(init_hp), attack_power(init_attack_power), position(init_pos),
+    : hp(init_hp), max_hp(init_hp), attack_power(init_attack_power), position(init_pos),
     speed(init_speed), is_alive(true), attack_interval(atk_interval), attack_timer(0),
     target_plant(nullptr), target_brain(nullptr), attacking_brain(false) {
     anim = new Animation(atlas, frame_interval);
@@ -181,6 +181,48 @@ void Zombie::Draw() {
     if (is_alive && anim) {
         anim->showimage(position.x, position.y, 1000 / 144);
     }
+    if (hp > 0 && max_hp > 0) { // 仅当存活且max_hp有效时绘制
+        const int health_bar_width = 60; // 血条总宽度 
+        const int health_bar_height = 8;  // 血条高度
+        const int health_bar_offset_y = 10; // 血条距离僵尸顶部的偏移量
+
+        int zombie_image_width = 160; // 假设僵尸图像平均宽度为80，具体值应根据实际图像调整
+        // 如果 Atlas 或 IMAGE 类提供了获取宽度的方法，可以使用它
+        // 例如: zombie_image_width = anim->getanim_atlas()->get_frame_width(); (假设有此方法)
+
+
+        // 血条背景位置
+        // 将血条居中显示在僵尸上方
+        int bar_bg_x = position.x + (zombie_image_width / 2) - (health_bar_width / 2);
+        int bar_bg_y = position.y - health_bar_offset_y - health_bar_height;
+
+        // 绘制血条背景 (例如，深灰色)
+        setfillcolor(RGB(80, 80, 80));
+        solidrectangle(bar_bg_x, bar_bg_y, bar_bg_x + health_bar_width, bar_bg_y + health_bar_height);
+
+        // 计算当前血量百分比和血条颜色
+        float health_percentage = static_cast<float>(hp) / max_hp;
+        int current_health_width = static_cast<int>(health_bar_width * health_percentage);
+
+        COLORREF health_color;
+        if (health_percentage > 0.66f) {
+            health_color = RGB(0, 255, 0); // 绿色
+        }
+        else if (health_percentage > 0.33f) {
+            health_color = RGB(255, 255, 0); // 黄色
+        }
+        else {
+            health_color = RGB(255, 0, 0); // 红色
+        }
+
+        // 绘制当前血量
+        setfillcolor(health_color);
+        solidrectangle(bar_bg_x, bar_bg_y, bar_bg_x + current_health_width, bar_bg_y + health_bar_height);
+
+        // 绘制血条边框
+        setlinecolor(BLACK);
+        rectangle(bar_bg_x, bar_bg_y, bar_bg_x + health_bar_width, bar_bg_y + health_bar_height);
+    }
 }
 
 // 普通僵尸实现
@@ -189,7 +231,7 @@ NormalZombie::NormalZombie(POINT init_pos)
         10,                  // 攻击力
         init_pos,
         3,              // 速度提高到100
-        new Atlas(_T("img/normal_zombie_%d.png"), 22),
+        new Atlas(_T("img/normal_zombies_%d.png"), 22),
         100,
         1000) {
 }
@@ -199,7 +241,9 @@ ArmoredZombie::ArmoredZombie(int init_hp, int armor_init_hp, POINT init_pos, dou
     Atlas* zombie_atlas, Atlas* armor_atlas,
     int frame_interval, int atk_interval)
     : Zombie(init_hp, 10, init_pos, init_speed, zombie_atlas, frame_interval, atk_interval),
-    armor_hp(armor_init_hp), has_armor(true) {
+    armor_hp(armor_init_hp),
+    max_armor_hp(armor_init_hp), // 初始化 max_armor_hp
+    has_armor(true) {
     this->armor_atlas = armor_atlas;
     armor_anim = new Animation(armor_atlas, frame_interval);
 }
@@ -232,13 +276,74 @@ void ArmoredZombie::TakeDamage(int damage) {
 void ArmoredZombie::Draw() {
     if (!is_alive) return;
 
-    if (has_armor && armor_anim) {
-        // 有防具时显示带防具的动画
+    // 1. 绘制动画
+    if (has_armor && armor_hp > 0 && armor_anim) {
+        // 有有效护甲时显示带防具的动画
         armor_anim->showimage(position.x, position.y, 1000 / 144);
     }
-    else {
-        // 没有防具时显示普通僵尸动画
-        Zombie::Draw();
+    else if (anim) { // 没有有效护甲时，显示基础僵尸动画 (anim 是 Zombie 基类的成员)
+        anim->showimage(position.x, position.y, 1000 / 144);
+    }
+
+    // --- 通用绘制参数 ---
+    const int bar_total_width = 50;     // 血条和护甲条的总宽度
+    const int bar_height = 6;           // 每个条的高度
+    const int bar_offset_y_base = 12;   // 基础Y轴偏移（最下面条的底部到僵尸顶部的距离）
+    const int bar_spacing = 2;          // 条之间的垂直间距
+
+    // 居中显示条
+    int zombie_image_width = 160;
+    int base_x = position.x + (zombie_image_width / 2) - (bar_total_width / 2);
+
+    // --- 2. 绘制生命值条 (HP) ---
+    // 生命值条总是显示（如果僵尸存活且有最大生命值）
+    if (max_hp > 0) { // hp 可能为0但仍存活直到下一帧处理，所以基于max_hp判断是否应绘制
+        int health_bar_y_top = position.y - bar_offset_y_base - bar_height;
+
+        // 绘制背景
+        setfillcolor(RGB(80, 80, 80)); // 深灰色背景
+        solidrectangle(base_x, health_bar_y_top, base_x + bar_total_width, health_bar_y_top + bar_height);
+
+        // 绘制前景 (当前血量)
+        float health_percentage = (hp > 0) ? (static_cast<float>(hp) / max_hp) : 0.0f;
+        int current_health_width = static_cast<int>(bar_total_width * health_percentage);
+
+        COLORREF health_color;
+        if (health_percentage > 0.66f) health_color = RGB(0, 255, 0);    // 绿色
+        else if (health_percentage > 0.33f) health_color = RGB(255, 255, 0); // 黄色
+        else health_color = RGB(255, 0, 0);    // 红色
+
+        if (current_health_width > 0) {
+            setfillcolor(health_color);
+            solidrectangle(base_x, health_bar_y_top, base_x + current_health_width, health_bar_y_top + bar_height);
+        }
+
+        // 绘制边框
+        setlinecolor(BLACK);
+        rectangle(base_x, health_bar_y_top, base_x + bar_total_width, health_bar_y_top + bar_height);
+    }
+
+    // --- 3. 绘制护甲条 (如果僵尸有护甲且护甲值 > 0) ---
+    if (has_armor && armor_hp > 0 && max_armor_hp > 0) {
+        // 护甲条在生命值条的上方
+        int armor_bar_y_top = position.y - bar_offset_y_base - bar_height - bar_spacing - bar_height;
+
+        // 绘制背景
+        setfillcolor(RGB(100, 100, 100)); // 略浅的灰色背景
+        solidrectangle(base_x, armor_bar_y_top, base_x + bar_total_width, armor_bar_y_top + bar_height);
+
+        // 绘制前景 (当前护甲值)
+        float armor_percentage = static_cast<float>(armor_hp) / max_armor_hp;
+        int current_armor_width = static_cast<int>(bar_total_width * armor_percentage);
+
+        if (current_armor_width > 0) {
+            setfillcolor(RGB(200, 200, 220)); // 浅蓝灰色或白色作为护甲颜色
+            solidrectangle(base_x, armor_bar_y_top, base_x + current_armor_width, armor_bar_y_top + bar_height);
+        }
+
+        // 绘制边框
+        setlinecolor(BLACK);
+        rectangle(base_x, armor_bar_y_top, base_x + bar_total_width, armor_bar_y_top + bar_height);
     }
 }
 
@@ -248,7 +353,7 @@ ConeZombie::ConeZombie(POINT init_pos)
         80,
         init_pos,
         3.0,               // 速度提高到80
-        new Atlas(_T("img/normal_zombie_%d.png"), 22),
+        new Atlas(_T("img/normal_zombies_%d.png"), 22),
         new Atlas(_T("img/cone_head_zombie_%d.png"), 20),
         100,
         1000) {
@@ -260,7 +365,7 @@ BucketZombie::BucketZombie(POINT init_pos)
         150,
         init_pos,
         3.0,               // 速度提高到60
-        new Atlas(_T("img/normal_zombie_%d.png"), 22),
+        new Atlas(_T("img/normal_zombies_%d.png"), 22),
         new Atlas(_T("img/bucket_head_zombie_%d.png"), 14),
         100,
         1000) {

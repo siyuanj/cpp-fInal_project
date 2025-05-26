@@ -16,6 +16,7 @@ class Zombie {
 protected:
     Animation* anim;
     int hp;
+    int max_hp;
     int attack_power;
     POINT position;
     POINT target_position;
@@ -89,6 +90,7 @@ public:
 class ArmoredZombie : public Zombie {
 protected:
     int armor_hp;           // 防具血量
+    int max_armor_hp;
     bool has_armor;         // 是否有防具
     Atlas* armor_atlas;     // 带防具时的动画集
     Animation* armor_anim;  // 带防具时的动画
