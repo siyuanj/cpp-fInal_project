@@ -47,7 +47,8 @@ enum GameState {
     PLACE_BASE,
     PLAYING,
     PAUSED,
-    GAME_OVER
+    GAME_OVER,
+    GAME_VICTORY // 游戏胜利状态
 };
 
 // 检查点是否在矩形内
@@ -115,7 +116,7 @@ int main() {
     pauseButtonAtlas = new Atlas(_T("img/pause_idle.png"));// 暂停按键
     //sun_back = new Atlas(_T("img/sun_back.png"));// 阳光栏
     seedbank = new Atlas(_T("img/seedbank_plant.png"));// 种子银行
-    gameover_botton = new Atlas(_T("img/gameover_eng.png"));// 阳光栏
+    gameover_botton = new Atlas(_T("img/gameover_eng.png"));// 结束按键
 
     ExMessage msg;              // 消息结构体，用于处理用户输入
 
@@ -140,6 +141,19 @@ int main() {
         TombstonePosition(600, 450),
         TombstonePosition(1000, 400)
     };
+
+    // ---- 回合制机制变量 START ----
+    int currentRound = 0;
+    const int MAX_ROUNDS = 5;
+    int zombiesToSpawnThisRound = 0;
+    int zombiesSpawnedThisRound = 0;
+    const float INITIAL_ZOMBIE_SPAWN_INTERVAL = 3000.0f; // 初始僵尸生成间隔 (毫秒)
+    float currentZombieSpawnInterval = INITIAL_ZOMBIE_SPAWN_INTERVAL;
+    std::vector<POINT> current_tombstone_positions_for_spawner; // 用于存储传递给 Spawner 的墓碑位置
+
+    bool isResting = false; // 是否处于回合间歇期
+    DWORD roundOverTime = 0; // 回合结束时间点
+    const DWORD REST_PERIOD = 10000; // 休息时间 10秒 (毫秒)
 
     // 创建游戏对象
     BrainBase* brain = new BrainBase();    // 创建大脑基地
@@ -219,30 +233,36 @@ int main() {
                         }
                         std::shuffle(indices.begin(), indices.end(), g);  // 随机打乱索引
 
-                        // 根据选择的僵尸数量，从打乱的索引中选取对应数量的位置
-                        for (int i = 0; i < selectedZombieCount; i++) {
-                            // 创建tombstone对象并添加到容器中
+                        for (int i = 0; i < selectedZombieCount && i < indices.size(); i++) {
                             POINT p = { possibleTombstonePositions[indices[i]].x, possibleTombstonePositions[indices[i]].y };
                             tombstones.push_back(new tombstone(p));
+                            current_tombstone_positions_for_spawner.push_back(p); // 正确收集墓碑位置
                         }
 
-                        std::vector<POINT> current_tombstone_positions;
-                        for (const auto& t_ptr : tombstones) {
-                            if (t_ptr) { // 确保指针有效
-                                current_tombstone_positions.push_back(t_ptr->getPosition());
-                                // 将指针存入数组
-                            }
-                        }
+                        //// 根据选择的僵尸数量，从打乱的索引中选取对应数量的位置
+                        //for (int i = 0; i < selectedZombieCount; i++) {
+                        //    // 创建tombstone对象并添加到容器中
+                        //    POINT p = { possibleTombstonePositions[indices[i]].x, possibleTombstonePositions[indices[i]].y };
+                        //    tombstones.push_back(new tombstone(p));
+                        //}
 
-                        // 向僵尸生成池中传入墓碑位置
-                        if (spawner == nullptr) { // 如果是第一次创建
-                            // 基础生成间隔为 1000 毫秒 ，生成概率为 0.5
-                            // 可需要调整这些默认值
-                            spawner = new ZombieSpawner(current_tombstone_positions, 3000, 0.5);
-                        }
-                        else { // 如果已经存在，则更新其墓碑位置
-                            spawner->UpdateSpawnPositions(current_tombstone_positions);
-                        }
+                        //std::vector<POINT> current_tombstone_positions;
+                        //for (const auto& t_ptr : tombstones) {
+                        //    if (t_ptr) { // 确保指针有效
+                        //        current_tombstone_positions.push_back(t_ptr->getPosition());
+                        //        // 将指针存入数组
+                        //    }
+                        //}
+
+                        //// 向僵尸生成池中传入墓碑位置
+                        //if (spawner == nullptr) { // 如果是第一次创建
+                        //    // 基础生成间隔为 3000 毫秒 ，生成概率为 0.5
+                        //    // 可需要调整这些默认值
+                        //    spawner = new ZombieSpawner(current_tombstone_positions, 3000, 0.5);
+                        //}
+                        //else { // 如果已经存在，则更新其墓碑位置
+                        //    spawner->UpdateSpawnPositions(current_tombstone_positions);
+                        //}
                         gameState = PLACE_BASE;  // 进入放置基地状态
                     }
                 }
@@ -273,6 +293,29 @@ int main() {
                         brain->SetPosition(basePosition); // **新增：设置BrainBase的实际位置**
                         gameState = PLAYING;
                     }
+                    // ---- 开始第一回合逻辑 START ----
+                    currentRound = 1; // 直接设为第一回合
+                    zombiesToSpawnThisRound = 5 + 10 * currentRound;
+                    zombiesSpawnedThisRound = 0;// 重置已生成的僵尸数量
+                    // 计算本回合僵尸生成间隔（每回合减少20%）
+                    currentZombieSpawnInterval = INITIAL_ZOMBIE_SPAWN_INTERVAL * static_cast<float>(pow(0.8, currentRound - 1));
+
+                    if (spawner) {
+                        delete spawner;
+                        spawner = nullptr;
+                    }
+                    if (!current_tombstone_positions_for_spawner.empty()) {
+                        spawner = new ZombieSpawner(current_tombstone_positions_for_spawner, static_cast<int>(currentZombieSpawnInterval), 1.0f);
+                        // 1.0f 表示100%生成概率
+						//每回合重新创建spawner对象，用于修改间隔
+                    }
+                    else {
+                        // 处理没有墓碑位置的情况，理论上不应发生
+                        drawChineseText(WIDTH / 2 - 100, HEIGHT / 2, _T("错误：没有墓碑位置！"), 30, RED);
+                        FlushBatchDraw(); Sleep(3000); running = false;
+                    }
+                    isResting = false;
+                    // ---- 开始第一回合逻辑 END ----
                 }
                 break;
             }
@@ -382,17 +425,15 @@ int main() {
             }
             case GAME_OVER: {
                 
-                /*settextcolor(RED);
-                settextstyle(60, 0, _T("Arial"));
-                outtextxy(480, 300, _T("游戏结束!"));
-                FlushBatchDraw();
-                Sleep(2000);*/
                 if (msg.message == WM_LBUTTONDOWN) {
                     running = false;
                     // 点击后退出游戏循环
                 }
-                
                 //continue;
+                break;
+            }
+            case GAME_VICTORY: {
+                if (msg.message == WM_LBUTTONDOWN) running = false;
                 break;
             }
             }
@@ -427,10 +468,6 @@ int main() {
             }
         }
 
-        // 更新所有僵尸
-        for (auto zombie : zombies) {
-            zombie->Update(delta, plants, brain);
-        }
 
         // 清理死亡的僵尸
         zombies.erase(
@@ -445,6 +482,13 @@ int main() {
             ),
             zombies.end()
         );// ***********************相关语法？？？
+
+        //更新所有僵尸
+        for (auto zombie : zombies) {
+            if (zombie && zombie->IsAlive()) { // 添加null和存活检查
+                zombie->Update(50, plants, brain); // 确保 brain 对象被传递
+            }
+        }// delta的原因
 
         // 更新植物
         for (auto plant : plants) {
@@ -495,12 +539,7 @@ int main() {
                     return false;
                 }),
             bullets.end());
-        // 更新所有僵尸
-        for (auto zombie : zombies) {
-            if (zombie && zombie->IsAlive()) { // 添加null和存活检查
-                zombie->Update(50, plants, brain); // 确保 brain 对象被传递
-            }
-        }// 更新了两遍？
+         
 
         // 绘制游戏画面
         cleardevice();  // 清空屏幕

@@ -404,10 +404,10 @@ ZombieSpawner::ZombieSpawner(const std::vector<POINT>& initial_spawn_positions, 
             current_spawn_interval = base_spawn_interval;
         }
         else if (num_tombstones == 2) {
-            current_spawn_interval = base_spawn_interval / 2;
+            current_spawn_interval = base_spawn_interval / 4;
         }
         else { // 3个或更多墓碑
-            current_spawn_interval = base_spawn_interval / 3;
+            current_spawn_interval = base_spawn_interval / 6;
         }
         // 确保间隔不会太小
         if (current_spawn_interval < 100) { // 例如，最小间隔100ms
