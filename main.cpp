@@ -104,6 +104,7 @@ int main() {
     Atlas* sun_back = nullptr;
     Atlas* seedbank = nullptr;
     Atlas* gameover_botton = nullptr;
+    Atlas* victory_botton = nullptr;
 
     POINT tombstone_pos = { 1000, 50 }; // 初始墓碑位置
 
@@ -117,6 +118,8 @@ int main() {
     //sun_back = new Atlas(_T("img/sun_back.png"));// 阳光栏
     seedbank = new Atlas(_T("img/seedbank_plant.png"));// 种子银行
     gameover_botton = new Atlas(_T("img/gameover_eng.png"));// 结束按键
+    victory_botton = new Atlas(_T("img/victory_botton.png"));// 结束按键
+
 
     ExMessage msg;              // 消息结构体，用于处理用户输入
 
@@ -239,30 +242,6 @@ int main() {
                             current_tombstone_positions_for_spawner.push_back(p); // 正确收集墓碑位置
                         }
 
-                        //// 根据选择的僵尸数量，从打乱的索引中选取对应数量的位置
-                        //for (int i = 0; i < selectedZombieCount; i++) {
-                        //    // 创建tombstone对象并添加到容器中
-                        //    POINT p = { possibleTombstonePositions[indices[i]].x, possibleTombstonePositions[indices[i]].y };
-                        //    tombstones.push_back(new tombstone(p));
-                        //}
-
-                        //std::vector<POINT> current_tombstone_positions;
-                        //for (const auto& t_ptr : tombstones) {
-                        //    if (t_ptr) { // 确保指针有效
-                        //        current_tombstone_positions.push_back(t_ptr->getPosition());
-                        //        // 将指针存入数组
-                        //    }
-                        //}
-
-                        //// 向僵尸生成池中传入墓碑位置
-                        //if (spawner == nullptr) { // 如果是第一次创建
-                        //    // 基础生成间隔为 3000 毫秒 ，生成概率为 0.5
-                        //    // 可需要调整这些默认值
-                        //    spawner = new ZombieSpawner(current_tombstone_positions, 3000, 0.5);
-                        //}
-                        //else { // 如果已经存在，则更新其墓碑位置
-                        //    spawner->UpdateSpawnPositions(current_tombstone_positions);
-                        //}
                         gameState = PLACE_BASE;  // 进入放置基地状态
                     }
                 }
@@ -448,98 +427,158 @@ int main() {
 
         // 更新玩家位置
 
-        if (moving_up) player_position.y -= PLAYER_SPEED;
-        if (moving_down) player_position.y += PLAYER_SPEED;
-        if (moving_left) player_position.x -= PLAYER_SPEED;
-        if (moving_right) player_position.x += PLAYER_SPEED;
+        if(gameState == PLAYING){
+            if (moving_up) player_position.y -= PLAYER_SPEED;
+            if (moving_down) player_position.y += PLAYER_SPEED;
+            if (moving_left) player_position.x -= PLAYER_SPEED;
+            if (moving_right) player_position.x += PLAYER_SPEED;
 
-        // 玩家边界检测
-        if (player_position.x < 0) player_position.x = 0;
-        if (player_position.y < 0) player_position.y = 0;
-        if (player_position.x > 1280 - 80) player_position.x = 1280 - 81;
-        if (player_position.y > 720 - 80) player_position.y = 720 - 81;
+            // 玩家边界检测
+            if (player_position.x < 0) player_position.x = 0;
+            if (player_position.y < 0) player_position.y = 0;
+            if (player_position.x > 1280 - 80) player_position.x = 1280 - 81;
+            if (player_position.y > 720 - 80) player_position.y = 720 - 81;
 
-        // 更新僵尸系统
-        if (spawner != nullptr) { // 确保 spawner 已被创建
-            if (Zombie* new_zombie = spawner->Update(delta)) {
-				// 通过delta判断是否应该生成新的僵尸,Update函数返回一个新的僵尸对象指针
-				// 僵尸类型、位置等均由Update函数内部逻辑决定
-                zombies.push_back(new_zombie);
-            }
-        }
-
-
-        // 清理死亡的僵尸
-        zombies.erase(
-            std::remove_if(zombies.begin(), zombies.end(),
-                [](Zombie* zombie) {
-                    if (!zombie->IsAlive()) {
-                        delete zombie;
-                        return true;
-                    }
-                    return false;
-                }
-            ),
-            zombies.end()
-        );// ***********************相关语法？？？
-
-        //更新所有僵尸
-        for (auto zombie : zombies) {
-            if (zombie && zombie->IsAlive()) { // 添加null和存活检查
-                zombie->Update(50, plants, brain); // 确保 brain 对象被传递
-            }
-        }// delta的原因
-
-        // 更新植物
-        for (auto plant : plants) {
-            if (plant && plant->IsAlive()) {
-                plant->Update(delta); // 调用通用更新 (例如动画)
-
-                // 如果是攻击型植物，则调用其攻击逻辑更新
-                AttackPlant* attack_plant = dynamic_cast<AttackPlant*>(plant);
-                if (attack_plant) {
-                    attack_plant->UpdateAttackLogic(50, zombies, bullets);
+            // 更新僵尸系统
+            if (spawner != nullptr) { // 确保 spawner 已被创建
+                if (Zombie* new_zombie = spawner->Update(delta)) {
+                    // 通过delta判断是否应该生成新的僵尸,Update函数返回一个新的僵尸对象指针
+                    // 僵尸类型、位置等均由Update函数内部逻辑决定
+                    zombies.push_back(new_zombie);
                 }
             }
-        }
-        // 更新子弹
-        for (size_t i = 0; i < bullets.size(); ++i) {
-            if (bullets[i] && bullets[i]->IsActive()) {
-                bullets[i]->Update(delta);
 
-                // 子弹与僵尸的碰撞检测
-                for (Zombie* zombie : zombies) {
-                    if (zombie && zombie->IsAlive() && bullets[i] && bullets[i]->IsActive()) {
-                        POINT bullet_pos = bullets[i]->GetPosition();
-                        POINT zombie_pos = zombie->GetPosition();
 
-                        // 简易碰撞检测 (基于中心点和大致范围，或使用矩形)
-                        // 子弹的碰撞区域可以小一点
-                        // 僵尸的碰撞区域需要根据 Zombie::ZOMBIE_WIDTH 和 Zombie::ZOMBIE_HEIGHT
-                        RECT bullet_rect = { bullet_pos.x, bullet_pos.y, bullet_pos.x + 15, bullet_pos.y + 15 }; // 假设子弹15x15
-                        RECT zombie_rect = { zombie_pos.x, zombie_pos.y, zombie_pos.x + Zombie::ZOMBIE_WIDTH, zombie_pos.y + Zombie::ZOMBIE_HEIGHT };
-
-                        RECT intersection; // 用于存储交集矩形
-                        if (IntersectRect(&intersection, &bullet_rect, &zombie_rect)) {
-                            zombie->TakeDamage(bullets[i]->GetDamage()); // 僵尸受到伤害
-                            bullets[i]->Deactivate();                    // 子弹失效
-                            
-                            break; // 一颗子弹通常只击中一个目标
+            // 清理死亡的僵尸
+            zombies.erase(
+                std::remove_if(zombies.begin(), zombies.end(),
+                    [](Zombie* zombie) {
+                        if (!zombie->IsAlive()) {
+                            delete zombie;
+                            return true;
                         }
-                        // 可添加播放击中音效
+                        return false;
+                    }
+                ),
+                zombies.end()
+            );// ***********************相关语法？？？
+
+            //更新所有僵尸
+            for (auto zombie : zombies) {
+                if (zombie && zombie->IsAlive()) { // 添加null和存活检查
+                    zombie->Update(50, plants, brain); // 确保 brain 对象被传递
+                }
+            }// delta的原因
+
+            // 更新植物
+            for (auto plant : plants) {
+                if (plant && plant->IsAlive()) {
+                    plant->Update(delta); // 调用通用更新 (例如动画)
+
+                    // 如果是攻击型植物，则调用其攻击逻辑更新
+                    AttackPlant* attack_plant = dynamic_cast<AttackPlant*>(plant);
+                    if (attack_plant) {
+                        attack_plant->UpdateAttackLogic(50, zombies, bullets);
+                    }
+                }
+            }
+            // 更新子弹
+            for (size_t i = 0; i < bullets.size(); ++i) {
+                if (bullets[i] && bullets[i]->IsActive()) {
+                    bullets[i]->Update(delta);
+
+                    // 子弹与僵尸的碰撞检测
+                    for (Zombie* zombie : zombies) {
+                        if (zombie && zombie->IsAlive() && bullets[i] && bullets[i]->IsActive()) {
+                            POINT bullet_pos = bullets[i]->GetPosition();
+                            POINT zombie_pos = zombie->GetPosition();
+
+                            // 简易碰撞检测 (基于中心点和大致范围，或使用矩形)
+                            // 子弹的碰撞区域可以小一点
+                            // 僵尸的碰撞区域需要根据 Zombie::ZOMBIE_WIDTH 和 Zombie::ZOMBIE_HEIGHT
+                            RECT bullet_rect = { bullet_pos.x, bullet_pos.y, bullet_pos.x + 15, bullet_pos.y + 15 }; // 假设子弹15x15
+                            RECT zombie_rect = { zombie_pos.x, zombie_pos.y, zombie_pos.x + Zombie::ZOMBIE_WIDTH, zombie_pos.y + Zombie::ZOMBIE_HEIGHT };
+
+                            RECT intersection; // 用于存储交集矩形
+                            if (IntersectRect(&intersection, &bullet_rect, &zombie_rect)) {
+                                zombie->TakeDamage(bullets[i]->GetDamage()); // 僵尸受到伤害
+                                bullets[i]->Deactivate();                    // 子弹失效
+
+                                break; // 一颗子弹通常只击中一个目标
+                            }
+                            // 可添加播放击中音效
+                        }
+                    }
+                }
+            }
+            // 清理不再活动的子弹
+            bullets.erase(
+                std::remove_if(bullets.begin(), bullets.end(),
+                    [](Bullet* b) {
+                        if (b && !b->IsActive()) { delete b; return true; }
+                        return false;
+                    }),
+                bullets.end());
+
+            // 5. 回合逻辑处理 (生成新僵尸仅在非休息期发生)
+            if (isResting) {
+                // 当前是休息期
+                    // 检查休息时间是否结束
+                if (GetTickCount() - roundOverTime >= REST_PERIOD) {
+                    // 休息期结束，开始下一回合
+                    currentRound++;
+                    if (currentRound > MAX_ROUNDS) {
+                        // 所有回合完成，游戏胜利
+                        gameState = GAME_VICTORY;
+                    }
+                    else {
+                        // 设置下一回合的参数
+                        zombiesToSpawnThisRound = 5 + 10 * currentRound;
+                        zombiesSpawnedThisRound = 0;
+                        currentZombieSpawnInterval = INITIAL_ZOMBIE_SPAWN_INTERVAL * static_cast<float>(pow(0.8, currentRound - 1));
+
+                        if (spawner) { delete spawner; spawner = nullptr; } // 清理旧的spawner
+                        if (!current_tombstone_positions_for_spawner.empty()) {
+                            spawner = new ZombieSpawner(current_tombstone_positions_for_spawner, static_cast<int>(currentZombieSpawnInterval), 1.0f);
+                        }
+                        else {
+                            // 错误处理：如果此时没有墓碑位置，则游戏无法继续
+                            running = false;
+                        }
+                        isResting = false; // 进入波数进行状态
+                    }
+                }
+            }
+            else {
+                // 当前非休息期 (波数正在进行中)
+                    // a. 僵尸生成逻辑
+                if (spawner != nullptr && zombiesSpawnedThisRound < zombiesToSpawnThisRound) {
+                    // 如果spawner存在，且本回合需要生成的僵尸还未全部生成
+                    if (Zombie* new_zombie = spawner->Update(delta)) { // spawner的Update决定是否生成僵尸
+                        zombies.push_back(new_zombie); // 将新生成的僵尸加入容器
+                        zombiesSpawnedThisRound++; // 增加本回合已生成僵尸计数
+                    }
+                }
+
+                // b. 检查当前波数是否结束
+                // 条件：本回合所有预定僵尸已生成完毕，并且场上所有僵尸已被消灭
+                if (zombiesSpawnedThisRound >= zombiesToSpawnThisRound && zombies.empty()) {
+                    if (currentRound >= MAX_ROUNDS) {
+                        // 如果已达到最大回合数，则游戏胜利
+                        gameState = GAME_VICTORY;
+                    }
+                    else {
+                        // 当前波数结束，进入休息期
+                        isResting = true;
+                        roundOverTime = GetTickCount(); // 记录波数结束时间，用于休息期计时
+                        if (spawner) { delete spawner; spawner = nullptr; } // 清理当前波数的spawner，下一波会新建
                     }
                 }
             }
         }
-        // 清理不再活动的子弹
-        bullets.erase(
-            std::remove_if(bullets.begin(), bullets.end(),
-                [](Bullet* b) {
-                    if (b && !b->IsActive()) { delete b; return true; }
-                    return false;
-                }),
-            bullets.end());
-         
+
+
+
 
         // 绘制游戏画面
         cleardevice();  // 清空屏幕
@@ -643,6 +682,24 @@ int main() {
             _stprintf_s(zombie_text, _T("僵尸数量: %d"), (int)zombies.size());
             outtextxy(1100, 90, zombie_text);
 
+            // 回合信息显示
+            TCHAR text_buffer[20];
+            if (isResting) { // 如果是休息期
+                // 计算并显示下一波倒计时
+                DWORD time_left_ms = (roundOverTime + REST_PERIOD) > GetTickCount() ? (roundOverTime + REST_PERIOD - GetTickCount()) : 0;
+                _stprintf_s(text_buffer, _T("下一波 %d 秒后"), time_left_ms / 1000);
+                drawChineseText(WIDTH / 2 - 150, 20, text_buffer, 30, YELLOW); // 休息提示用黄色
+            }
+            else { // 如果是波数进行中
+                // 显示当前波数和总波数
+                _stprintf_s(text_buffer, _T("第 %d / %d 波"), currentRound, MAX_ROUNDS);
+                drawChineseText(WIDTH / 2 - 100, 20, text_buffer, 30, WHITE);
+                // 显示本波还需生成的僵尸数量 (如果还有未生成的)
+                if (zombiesToSpawnThisRound - zombiesSpawnedThisRound > 0) {
+                    _stprintf_s(text_buffer, _T("本波待生成: %d"), zombiesToSpawnThisRound - zombiesSpawnedThisRound);
+                    drawChineseText(WIDTH / 2 - 100, 50, text_buffer, 20, WHITE);
+                }
+            }
             // 绘制玩家角色
             if (moving_left || moving_right || moving_up || moving_down) {
                 // 移动时播放动画
@@ -725,6 +782,14 @@ int main() {
             
             break;
         }
+        case GAME_VICTORY: {
+            // 绘制游戏胜利界面
+            putimage_alpha(0, 0, victory_botton->frame_list[0]);
+            /*drawChineseText(WIDTH / 2 - 150, HEIGHT / 2 - 100, _T("游戏胜利!"), 70, GREEN);
+            drawChineseText(WIDTH / 2 - 220, HEIGHT / 2 + 20, _T("恭喜你成功抵御了所有僵尸!"), 30, WHITE);
+            drawChineseText(WIDTH / 2 - 150, HEIGHT / 2 + 70, _T("点击任意位置退出"), 25, YELLOW);*/
+            break;
+        }
         }
 
         FlushBatchDraw(); // 更新屏幕显示
@@ -737,47 +802,49 @@ int main() {
         }
     }
 
-    // 清理资源
-    // 清理子弹
-    for (auto b : bullets) delete b; bullets.clear();
-    NormalBullet::Cleanup(); 
-    // 清理僵尸
-    for (auto zombie : zombies) {
-        delete zombie;
-    }
-    zombies.clear();
+        // 清理资源
+        // 清理子弹
+        for (auto b : bullets) delete b; bullets.clear();
+        NormalBullet::Cleanup(); 
+        // 清理僵尸
+        for (auto zombie : zombies) {
+            delete zombie;
+        }
+        zombies.clear();
 
-    // 清理植物
-    for (auto plant : plants) {
-        delete plant;
-    }
-    plants.clear();
+        // 清理植物
+        for (auto plant : plants) {
+            delete plant;
+        }
+        plants.clear();
 
-    // 清理tombstones
-    for (auto tomb : tombstones) {
-        delete tomb;
-    }
-    tombstones.clear();
-    if (spawner != nullptr) {
-        delete spawner;
-        spawner = nullptr;
-    }
+        // 清理tombstones
+        for (auto tomb : tombstones) {
+            delete tomb;
+        }
+        tombstones.clear();
+        if (spawner != nullptr) {
+            delete spawner;
+            spawner = nullptr;
+        }
 
-    // 清理其他资源
-    delete brain;
-    delete anim_player_left;
-    delete anim_player_right;
-    delete atlas_player_left;
-    delete atlas_player_right;
-    delete backgroundAtlas;
-    delete beginButtonAtlas;
-    delete button1Atlas;
-    delete button2Atlas;
-    delete button3Atlas;
-    delete brainBaseAtlas;
-    delete pauseButtonAtlas;
-    delete seedbank;
+        // 清理其他资源
+        delete brain;
+        delete anim_player_left;
+        delete anim_player_right;
+        delete atlas_player_left;
+        delete atlas_player_right;
+        delete backgroundAtlas;
+        delete beginButtonAtlas;
+        delete button1Atlas;
+        delete button2Atlas;
+        delete button3Atlas;
+        delete brainBaseAtlas;
+        delete pauseButtonAtlas;
+        delete seedbank;
+		delete gameover_botton;
+		delete victory_botton;
 
-    closegraph(); // 关闭图形窗口
-    return 0;
+        closegraph(); // 关闭图形窗口
+        return 0;
 }
