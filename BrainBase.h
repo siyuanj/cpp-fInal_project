@@ -23,6 +23,8 @@ public:
     bool IsAlive() const;
     bool IsPlaced() const;
     void Draw();
+    void ApplyHealthUpgrade(int amount); // 声明强化生命值的方法
+
 };
 
 #endif // BRAIN_BASE_H

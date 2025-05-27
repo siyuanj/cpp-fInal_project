@@ -31,6 +31,11 @@ public:
     bool IsAlive() const;
     virtual void TakeDamage(int damage);
     virtual void Draw();
+    virtual void IncreaseMaxHPAndHeal(int amount) {
+               max_hp += amount;
+               hp += amount;
+               if (hp > max_hp) hp = max_hp; // 确保当前HP不超过新的最大HP
+    }
 };
 
 class AttackPlant : public Plant {
@@ -50,6 +55,8 @@ public:
     virtual void UpdateAttackLogic(int delta, std::vector<Zombie*>& zombies, std::vector<Bullet*>& bullets);
 
     virtual void Attack(Zombie* target_zombie, std::vector<Bullet*>& bullets) = 0; // 修改参数
+    
+    void IncreaseAttackPower(int amount) { attack_power += amount; }
 
 };
 

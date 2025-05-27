@@ -26,7 +26,7 @@
 const double PI = 3.1415926;         // 圆周率常量
 double PLAYER_SPEED = 5.0;           // 玩家移动速度
 POINT player_position = { 500,500 }; // 玩家初始位置
-int sun_count = 200;                  // 初始阳光数量
+int sun_count = 500;                  // 初始阳光数量
 #define WIDTH 1280                   // 窗口宽度
 #define HEIGHT 720                   // 窗口高度
 
@@ -48,15 +48,16 @@ enum GameState {
     PLAYING,
     PAUSED,
     GAME_OVER,
-    GAME_VICTORY // 游戏胜利状态
+    GAME_VICTORY, // 游戏胜利状态
+    UPGRADE_CHOICE // 回合结束强化选择状态
 };
 
 // 检查点是否在矩形内
-bool isPointInRect(int px, int py, int x, int y, int width, int height) {
+static bool isPointInRect(int px, int py, int x, int y, int width, int height) {
     return px >= x && px <= x + width && py >= y && py <= y + height;
 }
 // 绘制中文文本函数
-void drawChineseText(int x, int y, const TCHAR* text, int height = 30, COLORREF color = WHITE) {
+static void drawChineseText(int x, int y, const TCHAR* text, int height = 30, COLORREF color = WHITE) {
     setbkmode(TRANSPARENT);
     LOGFONT font;
     gettextstyle(&font);
@@ -402,6 +403,84 @@ int main() {
                 }
                 break;
             }
+                       // 新增：处理强化选择界面的输入
+            case UPGRADE_CHOICE: {
+                if (msg.message == WM_LBUTTONDOWN) {
+                    // 定义强化选项按钮的布局参数
+                    int button_width = 600; // 按钮宽度
+                    int button_height = 50;  // 按钮高度
+                    int button_spacing = 20; // 按钮间距
+                    int button_x = WIDTH / 2 - button_width / 2; // 按钮X坐标 (居中)
+                    // 按钮Y坐标，从屏幕中间向上排列
+                    int button1_y = HEIGHT / 2 - button_height * 2;
+                    int button2_y = button1_y + button_height + button_spacing;
+                    int button3_y = button2_y + button_height + button_spacing;
+
+                    bool choice_made = false; // 标记是否已做出选择
+
+                    // 检查是否点击了第一个强化选项 (攻击强化)
+                    if (isPointInRect(msg.x, msg.y, button_x, button1_y, button_width, button_height)) {
+                        // 遍历所有植物，对 Peashooter 和 Repeater 增加攻击力
+                        for (Plant* p : plants) {
+                            // 假设 Peashooter 和 Repeater 继承自 AttackPlant, 
+                            // 并且 AttackPlant 有 IncreaseAttackPower 方法
+                            if (dynamic_cast<Peashooter*>(p) || dynamic_cast<Repeater*>(p)) {
+                                if (AttackPlant* ap = dynamic_cast<AttackPlant*>(p)) {
+                                    ap->IncreaseAttackPower(10); // 攻击力+10
+                                }
+                            }
+                        }
+                        choice_made = true;
+                    }
+                    // 检查是否点击了第二个强化选项 (防御强化)
+                    else if (isPointInRect(msg.x, msg.y, button_x, button2_y, button_width, button_height)) {
+                        // 遍历所有植物，对 WallNut 和 TallWallNut 增加生命值
+                        for (Plant* p : plants) {
+                            // 假设 Plant 基类有 IncreaseMaxHPAndHeal 方法
+                            if (WallNut* wn = dynamic_cast<WallNut*>(p)) {
+                                wn->IncreaseMaxHPAndHeal(100); // 生命值+100
+                            }
+                            else if (TallWallNut* twn = dynamic_cast<TallWallNut*>(p)) {
+                                twn->IncreaseMaxHPAndHeal(100); // 生命值+100
+                            }
+                        }
+                        choice_made = true;
+                    }
+                    // 检查是否点击了第三个强化选项 (基地强化)
+                    else if (isPointInRect(msg.x, msg.y, button_x, button3_y, button_width, button_height)) {
+                        // 增加大脑基地生命值
+                        // 假设 BrainBase 类有 ApplyHealthUpgrade 方法
+                        brain->ApplyHealthUpgrade(300); // 基地生命值+300
+                        choice_made = true;
+                    }
+
+                    // 如果做出了选择，则进入下一回合的准备阶段
+                    if (choice_made) {
+                        currentRound++; // 回合数增加
+
+                        // 为下一回合设置参数
+                        zombiesToSpawnThisRound = 5 + 5 * currentRound; // 计算下一回合僵尸数量
+                        zombiesSpawnedThisRound = 0; // 重置已生成僵尸计数
+                        // 计算下一回合僵尸生成间隔
+                        currentZombieSpawnInterval = INITIAL_ZOMBIE_SPAWN_INTERVAL * static_cast<float>(pow(0.8, currentRound - 1));
+
+                        // 清理并重新创建僵尸生成器
+                        if (spawner) { delete spawner; spawner = nullptr; }
+                        if (!current_tombstone_positions_for_spawner.empty()) {
+                            spawner = new ZombieSpawner(current_tombstone_positions_for_spawner, static_cast<int>(currentZombieSpawnInterval), 1.0f);
+                        }
+                        else {
+                            // 错误处理：如果没有墓碑位置，游戏可能无法继续
+                            drawChineseText(WIDTH / 2 - 100, HEIGHT / 2, _T("错误：没有墓碑位置！"), 30, RED);
+                            FlushBatchDraw(); Sleep(3000); running = false;
+                        }
+                        isResting = true; // 进入回合间歇期
+                        roundOverTime = GetTickCount(); // 记录回合结束（强化选择完毕）的时间，用于休息期计时
+                        gameState = PLAYING; // 返回游戏进行状态
+                    }
+                }
+                break;
+            } // 结束 UPGRADE_CHOICE 输入处理
             case GAME_OVER: {
                 
                 if (msg.message == WM_LBUTTONDOWN) {
@@ -439,14 +518,14 @@ int main() {
             if (player_position.x > 1280 - 80) player_position.x = 1280 - 81;
             if (player_position.y > 720 - 80) player_position.y = 720 - 81;
 
-            // 更新僵尸系统
-            if (spawner != nullptr) { // 确保 spawner 已被创建
-                if (Zombie* new_zombie = spawner->Update(delta)) {
-                    // 通过delta判断是否应该生成新的僵尸,Update函数返回一个新的僵尸对象指针
-                    // 僵尸类型、位置等均由Update函数内部逻辑决定
-                    zombies.push_back(new_zombie);
-                }
-            }
+            //// 更新僵尸系统
+            //if (spawner != nullptr) { // 确保 spawner 已被创建
+            //    if (Zombie* new_zombie = spawner->Update(delta)) {
+            //        // 通过delta判断是否应该生成新的僵尸,Update函数返回一个新的僵尸对象指针
+            //        // 僵尸类型、位置等均由Update函数内部逻辑决定
+            //        zombies.push_back(new_zombie);
+            //    }
+            //}
 
 
             // 清理死亡的僵尸
@@ -520,13 +599,13 @@ int main() {
                     }),
                 bullets.end());
 
-            // 5. 回合逻辑处理 (生成新僵尸仅在非休息期发生)
+            // 回合逻辑处理 (生成新僵尸仅在非休息期发生)
             if (isResting) {
                 // 当前是休息期
                     // 检查休息时间是否结束
                 if (GetTickCount() - roundOverTime >= REST_PERIOD) {
                     // 休息期结束，开始下一回合
-                    currentRound++;
+
                     if (currentRound > MAX_ROUNDS) {
                         // 所有回合完成，游戏胜利
                         gameState = GAME_VICTORY;
@@ -563,14 +642,14 @@ int main() {
                 // b. 检查当前波数是否结束
                 // 条件：本回合所有预定僵尸已生成完毕，并且场上所有僵尸已被消灭
                 if (zombiesSpawnedThisRound >= zombiesToSpawnThisRound && zombies.empty()) {
+
                     if (currentRound >= MAX_ROUNDS) {
                         // 如果已达到最大回合数，则游戏胜利
                         gameState = GAME_VICTORY;
                     }
                     else {
                         // 当前波数结束，进入休息期
-                        isResting = true;
-                        roundOverTime = GetTickCount(); // 记录波数结束时间，用于休息期计时
+                        gameState = UPGRADE_CHOICE;
                         if (spawner) { delete spawner; spawner = nullptr; } // 清理当前波数的spawner，下一波会新建
                     }
                 }
@@ -771,6 +850,46 @@ int main() {
             putimage_alpha(buttonX, buttonY, pauseButtonAtlas->frame_list[0]);
             break;
         }
+        // 绘制强化选择界面
+        case UPGRADE_CHOICE: {
+            cleardevice();
+            // 绘制背景和种子栏 (如果需要保持一致的背景)
+            putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
+            putimage_alpha(0, 0, seedbank->frame_list[0]);
+
+            // 绘制提示文字
+            drawChineseText(WIDTH / 2 - 200, HEIGHT / 2 - 150, _T("回合结束，请选择强化！"), 40, YELLOW);
+
+            // 定义强化选项按钮的布局参数 (与输入处理部分保持一致)
+            int button_width = 600;
+            int button_height = 50;
+            int button_spacing = 20;
+            int button_x = WIDTH / 2 - button_width / 2;
+            int button1_y = HEIGHT / 2 - button_height * 2;
+            int button2_y = button1_y + button_height + button_spacing;
+            int button3_y = button2_y + button_height + button_spacing;
+
+            // 设置按钮样式
+            setfillcolor(DARKGRAY); // 按钮背景色
+            setlinecolor(WHITE);    // 按钮边框色
+            setbkmode(TRANSPARENT); // 文字背景透明
+
+            // 绘制第一个强化选项按钮 (攻击强化)
+            solidrectangle(button_x, button1_y, button_x + button_width, button1_y + button_height); // 绘制按钮背景
+            rectangle(button_x, button1_y, button_x + button_width, button1_y + button_height);      // 绘制按钮边框
+            drawChineseText(button_x + 20, button1_y + 10, _T("强化攻击：豌豆射手与双发射手攻击力 +10"), 25, WHITE);
+
+            // 绘制第二个强化选项按钮 (防御强化)
+            solidrectangle(button_x, button2_y, button_x + button_width, button2_y + button_height);
+            rectangle(button_x, button2_y, button_x + button_width, button2_y + button_height);
+            drawChineseText(button_x + 20, button2_y + 10, _T("强化防御：坚果墙与高坚果生命值 +100"), 25, WHITE);
+
+            // 绘制第三个强化选项按钮 (基地强化)
+            solidrectangle(button_x, button3_y, button_x + button_width, button3_y + button_height);
+            rectangle(button_x, button3_y, button_x + button_width, button3_y + button_height); // Typo: button_y should be button3_y
+            drawChineseText(button_x + 20, button3_y + 10, _T("强化基地：大脑基地生命值 +300"), 25, WHITE);
+            break;
+        } // 结束 UPGRADE_CHOICE 绘制逻辑
         case GAME_OVER: {
             cleardevice();
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);

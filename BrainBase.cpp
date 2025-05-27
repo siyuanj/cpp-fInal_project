@@ -29,6 +29,19 @@ void BrainBase::TakeDamage(int damage) {
 bool BrainBase::IsAlive() const { return is_alive; }
 bool BrainBase::IsPlaced() const { return is_placed; }
 
+// 实现强化生命值的方法
+void BrainBase::ApplyHealthUpgrade(int amount) {
+    max_hp += amount; // 增加最大生命值
+    hp += amount;     // 同时增加当前生命值
+    // 可选：确保当前生命值不超过新的最大生命值（尽管在此逻辑下通常不会超过）
+    if (hp > max_hp) {
+        hp = max_hp;
+    }
+    // 确保生命值不会因为增加过多而溢出或变为负数（如果amount可能为负）
+    if (hp < 0) hp = 0;
+    if (max_hp < 0) max_hp = 0; // 虽然不太可能，但作为防御性编程
+}
+
 void BrainBase::Draw() {
     if (is_placed) {
         putimage_alpha(position.x - 50, position.y, brain_base->frame_list[0]);
@@ -70,7 +83,6 @@ void BrainBase::Draw() {
         setfillcolor(health_color);
         solidrectangle(bar_bg_x, bar_bg_y, bar_bg_x + current_health_width, bar_bg_y + health_bar_height);
 
-        // 可选：绘制血条边框
         setlinecolor(BLACK);
         rectangle(bar_bg_x, bar_bg_y, bar_bg_x + health_bar_width, bar_bg_y + health_bar_height);
     }
