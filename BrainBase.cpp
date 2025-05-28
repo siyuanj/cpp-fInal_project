@@ -87,3 +87,10 @@ void BrainBase::Draw() {
         rectangle(bar_bg_x, bar_bg_y, bar_bg_x + health_bar_width, bar_bg_y + health_bar_height);
     }
 }
+
+void BrainBase::Reset() {
+    // 将生命值恢复到最大值
+    hp = max_hp; // max_hp升级不应跨游戏持续，重置为初始最大生命值
+    is_alive = true; // 确保基地标记为存活
+    // 根据需要重置其他特定于游戏会话的状态
+}

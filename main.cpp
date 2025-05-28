@@ -92,6 +92,77 @@ static void drawChineseText(int x, int y, const TCHAR* text, int height = 30, CO
     settextcolor(color);
     outtextxy(x, y, text);
 }
+void cleanupPreviousGameSession(
+    std::vector<Plant*>& plants_vec,     // 植物对象容器
+    std::vector<Zombie*>& zombies_vec,   // 僵尸对象容器
+    std::vector<Bullet*>& bullets_vec,   // 子弹对象容器
+    std::vector<tombstone*>& tombstones_vec, // 墓碑对象容器
+    std::vector<POINT>& tombstone_spawner_pos_vec, // 墓碑生成点位置容器
+    BrainBase* game_brain,               // 大脑基地对象指针
+    int& game_selected_plant,            // 当前选中的植物类型
+    bool& move_up, bool& move_down,      // 玩家向上/向下移动标志
+    bool& move_left, bool& move_right,   // 玩家向左/向右移动标志
+    bool& face_lft,                      // 玩家朝向标志 (true为左)
+    POINT& base_pos,                     // 基地位置
+    ZombieSpawner*& current_spawner      // 当前僵尸生成器指针
+) {
+    // 1. 清理动态分配的游戏对象
+    // 清理植物
+    for (Plant* p : plants_vec) {
+        if (p) delete p;
+    }
+    plants_vec.clear();
+
+    // 清理僵尸
+    for (Zombie* z : zombies_vec) {
+        if (z) delete z;
+    }
+    zombies_vec.clear();
+
+    // 清理子弹
+    for (Bullet* b : bullets_vec) {
+        if (b) delete b;
+    }
+    bullets_vec.clear();
+
+    // 清理墓碑对象
+    for (tombstone* t : tombstones_vec) {
+        if (t) delete t;
+    }
+    tombstones_vec.clear();
+
+    // 清理用于生成器的墓碑位置
+    tombstone_spawner_pos_vec.clear();
+
+    // 清理僵尸生成器
+    if (current_spawner) {
+        delete current_spawner;
+        current_spawner = nullptr;
+    }
+
+    // 2. 重置大脑基地的状态
+    if (game_brain) {
+        game_brain->Reset();
+    }
+    base_pos = { -1, -1 }; // 重置基地位置为无效
+
+    // 3. 重置全局游戏状态变量
+    sun_count = 500;                 // 恢复初始阳光数量
+    player_position = { 500, 500 };  // 恢复玩家初始位置
+
+    // 4. 重置 main() 函数内的局部游戏状态变量
+    game_selected_plant = 0;         // 取消植物选择
+
+    // 5. 重置玩家移动相关的标志位
+    move_up = false;
+    move_down = false;
+    move_left = false;
+    move_right = false;
+    face_lft = true; // 默认朝向左
+
+    
+}
+
 
 int main() {
     std::random_device rd;  // 硬件熵源（可能慢但不可预测）
@@ -132,6 +203,7 @@ int main() {
     Atlas* gameover_botton = nullptr;
     Atlas* victory_botton = nullptr;
     Atlas* exitButtonAtlas = nullptr;
+    Atlas* atlas_main_title = nullptr;
 
     POINT tombstone_pos = { 1000, 50 }; // 初始墓碑位置
 
@@ -147,6 +219,7 @@ int main() {
     gameover_botton = new Atlas(_T("img/gameover_eng.png"));// 结束按键
     victory_botton = new Atlas(_T("img/victory_botton.png"));// 结束按键
     exitButtonAtlas = new Atlas(_T("img/exit_idle.png")); //退出按键
+    atlas_main_title = new Atlas(_T("img/main_title.png")); //主标题图像
 
     ExMessage msg;              // 消息结构体，用于处理用户输入
 
@@ -435,6 +508,12 @@ int main() {
             case PAUSED: {
                 // 暂停状态输入处理
                 if (msg.message == WM_KEYDOWN && msg.vkcode == VK_ESCAPE) {
+                    cleanupPreviousGameSession(
+                        plants, zombies, bullets, tombstones, current_tombstone_positions_for_spawner,
+                        brain, selected_plant,
+                        moving_up, moving_down, moving_left, moving_right, facing_left,
+                        basePosition, spawner
+                    );
                     gameState = START_SCREEN;
                 }
                 else if (msg.message == WM_LBUTTONDOWN) {
@@ -717,6 +796,25 @@ int main() {
             putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
             
             putimage_alpha(0, 0, seedbank->frame_list[0]);
+            // 绘制主标题
+            if (atlas_main_title && !atlas_main_title->frame_list.empty() && atlas_main_title->frame_list[0]) {
+                // 标题图片尺寸 800x533
+                int titleWidth = 600;
+                int titleX = (WIDTH - titleWidth) / 2; // 水平居中
+				int titleY = 50; // 垂直位置 
+                putimage_alpha(titleX, titleY, atlas_main_title->frame_list[0]);
+            }
+            // 绘制操作说明文字
+            int helpTextY = HEIGHT / 2 - 60; // 说明文字的起始Y坐标
+            int helpTextHeight = 20;         // 说明文字的字体大小
+            COLORREF helpTextColor = YELLOW; // 说明文字的颜色
+
+            drawChineseText(20, helpTextY, _T("操作指南:"), helpTextHeight + 2, helpTextColor); // 标题稍大一些
+            drawChineseText(20, helpTextY + 25, _T("1. 点击开始后, 选择墓碑数量 (即调整游戏难度，3>2>1)。"), helpTextHeight, WHITE);
+            drawChineseText(20, helpTextY + 25 + 25, _T("2. 游戏中按数字键1-5选择植物。"), helpTextHeight, WHITE);
+            drawChineseText(20, helpTextY + 25 + 25 + 25, _T("3. WASD或方向键移动玩家。"), helpTextHeight, WHITE);
+            drawChineseText(20, helpTextY + 25 + 25 + 25 + 25, _T("4. 按下1，2，3，4，5（对应不同植物）同时鼠标左键点击地图放置植物。"), helpTextHeight, WHITE);
+
 
             int buttonWidth = 250;
             int buttonHeight = 250;
@@ -1034,6 +1132,7 @@ int main() {
 		delete gameover_botton;
 		delete victory_botton;
         delete exitButtonAtlas;
+        delete atlas_main_title;
 
         closegraph(); // 关闭图形窗口
         return 0;

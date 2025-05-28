@@ -24,6 +24,7 @@ public:
     bool IsPlaced() const;
     void Draw();
     void ApplyHealthUpgrade(int amount); // 声明强化生命值的方法
+    void Reset(); // 新增：重置基地状态的方法
 
 };
 
