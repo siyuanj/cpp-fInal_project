@@ -106,6 +106,7 @@ int main() {
     Atlas* seedbank = nullptr;
     Atlas* gameover_botton = nullptr;
     Atlas* victory_botton = nullptr;
+    Atlas* exitButtonAtlas = nullptr;
 
     POINT tombstone_pos = { 1000, 50 }; // 初始墓碑位置
 
@@ -120,7 +121,7 @@ int main() {
     seedbank = new Atlas(_T("img/seedbank_plant.png"));// 种子银行
     gameover_botton = new Atlas(_T("img/gameover_eng.png"));// 结束按键
     victory_botton = new Atlas(_T("img/victory_botton.png"));// 结束按键
-
+    exitButtonAtlas = new Atlas(_T("img/exit_idle.png")); //退出按键
 
     ExMessage msg;              // 消息结构体，用于处理用户输入
 
@@ -194,12 +195,21 @@ int main() {
             case START_SCREEN: {
                 // 开始界面输入处理
                 if (msg.message == WM_LBUTTONDOWN) {
-                    // 检查是否点击了开始游戏按钮 
-                    // 次数仅判断点击，之后统一绘图
-                    int buttonX = WIDTH / 2 - 100;
+                    int buttonWidth = 250;
+                    int buttonHeight = 250;
                     int buttonY = HEIGHT / 2 + 50;
-                    if (isPointInRect(msg.x, msg.y, buttonX, buttonY, 250, 250)) {
+                    int buttonSpacing = 30; // 按钮间距
+
+                    // 开始按钮 (左侧)
+                    int beginButtonX = (WIDTH / 2) - buttonWidth - (buttonSpacing / 2);
+                    if (isPointInRect(msg.x, msg.y, beginButtonX, buttonY, buttonWidth, buttonHeight)) {
                         gameState = SELECT_ZOMBIES;
+                    }
+
+                    // 退出按钮 (右侧)
+                    int exitButtonX = (WIDTH / 2) + (buttonSpacing / 2);
+                    if (isPointInRect(msg.x, msg.y, exitButtonX, buttonY, buttonWidth, buttonHeight)) {
+                        running = false; // 点击退出按钮，结束游戏
                     }
                 }
                 break;
@@ -396,7 +406,7 @@ int main() {
             case PAUSED: {
                 // 暂停状态输入处理
                 if (msg.message == WM_KEYDOWN && msg.vkcode == VK_ESCAPE) {
-                    running = false;
+                    gameState = START_SCREEN;
                 }
                 else if (msg.message == WM_LBUTTONDOWN) {
                     gameState = PLAYING;
@@ -671,10 +681,24 @@ int main() {
             
             putimage_alpha(0, 0, seedbank->frame_list[0]);
 
-            // 显示开始游戏按钮（使用图片）
-            int buttonX = WIDTH / 2 - 100;
+            int buttonWidth = 250;
+            int buttonHeight = 250;
             int buttonY = HEIGHT / 2 + 50;
-            putimage_alpha(buttonX, buttonY, beginButtonAtlas->frame_list[0]);
+            int buttonSpacing = 30; // 与输入处理中的间距一致
+
+            // 绘制开始游戏按钮 (左侧)
+            int beginButtonX = (WIDTH / 2) - buttonWidth - (buttonSpacing / 2);
+            if (beginButtonAtlas && !beginButtonAtlas->frame_list.empty() && beginButtonAtlas->frame_list[0] != nullptr) {
+                // 使用指定大小绘制，拉伸/缩放整个源图像
+                putimage_alpha(beginButtonX, buttonY,beginButtonAtlas->frame_list[0]);
+            }
+
+            // 绘制退出游戏按钮 (右侧)
+            int exitButtonX = (WIDTH / 2) + (buttonSpacing / 2);
+            if (exitButtonAtlas && !exitButtonAtlas->frame_list.empty() && exitButtonAtlas->frame_list[0] != nullptr) {
+                // 使用指定大小绘制，拉伸/缩放整个源图像
+                putimage_alpha(exitButtonX, buttonY,exitButtonAtlas->frame_list[0]);
+            }
             break;
         }
         case SELECT_ZOMBIES: {
@@ -966,6 +990,7 @@ int main() {
         delete seedbank;
 		delete gameover_botton;
 		delete victory_botton;
+        delete exitButtonAtlas;
 
         closegraph(); // 关闭图形窗口
         return 0;
