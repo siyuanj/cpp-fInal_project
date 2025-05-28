@@ -18,6 +18,8 @@
 #include "BrainBase.h"       // 大脑基地类
 #include "tombstone.h"       // 墓碑类
 
+#include <fstream>           // 用于文件输入/输出
+
 // 链接Windows图像处理库，用于支持透明图片
 #pragma comment(lib, "MSIMG32.LIB")
 
@@ -29,6 +31,27 @@ POINT player_position = { 500,500 }; // 玩家初始位置
 int sun_count = 500;                  // 初始阳光数量
 #define WIDTH 1280                   // 窗口宽度
 #define HEIGHT 720                   // 窗口高度
+int games_won = 0;
+int games_lost = 0;
+const char* STATS_FILE = "game_stats.txt";
+
+// 函数声明 (如果将定义放在main函数之后)
+void loadGameStats() {
+    std::ifstream infile(STATS_FILE);
+    if (infile.is_open()) {
+        infile >> games_won >> games_lost;
+        infile.close();
+    }
+}
+
+void saveGameStats() {
+    std::ofstream outfile(STATS_FILE);
+    if (outfile.is_open()) {
+        outfile << games_won << std::endl;
+        outfile << games_lost << std::endl;
+        outfile.close();
+    }
+}
 
 // 创建全局的玩家动画图集对象
 Atlas* atlas_player_left;
@@ -76,6 +99,7 @@ int main() {
 
     initgraph(WIDTH, HEIGHT); // 初始化图形窗口，设置大小为1280x720
     cleardevice();
+    loadGameStats();
 
     // 设置文字显示样式
     LOGFONT font;
@@ -184,9 +208,13 @@ int main() {
 
         // 检查游戏是否失败
         if (!brain->IsAlive()) {
-            cleardevice();
-			gameState = GAME_OVER; // 设置游戏状态为结束
-            
+            if (gameState != GAME_OVER && gameState != GAME_VICTORY) {
+                //只在状态转换时执行
+                games_lost++;
+                saveGameStats();
+                cleardevice();
+                gameState = GAME_OVER; // 设置游戏状态为结束
+            }
         }
 
         // 处理用户输入——阶段处理部分
@@ -618,6 +646,10 @@ int main() {
 
                     if (currentRound > MAX_ROUNDS) {
                         // 所有回合完成，游戏胜利
+                        if (gameState != GAME_VICTORY) { 
+                            games_won++;
+                            saveGameStats();
+                        }
                         gameState = GAME_VICTORY;
                     }
                     else {
@@ -655,6 +687,10 @@ int main() {
 
                     if (currentRound >= MAX_ROUNDS) {
                         // 如果已达到最大回合数，则游戏胜利
+                        if (gameState != GAME_VICTORY) {
+                            games_won++;
+                            saveGameStats();
+                        }
                         gameState = GAME_VICTORY;
                     }
                     else {
@@ -699,6 +735,11 @@ int main() {
                 // 使用指定大小绘制，拉伸/缩放整个源图像
                 putimage_alpha(exitButtonX, buttonY,exitButtonAtlas->frame_list[0]);
             }
+            // 显示胜利和失败次数 <--- 添加以下代码
+            TCHAR stats_text[50];
+            _stprintf_s(stats_text, _T("胜利: %d   失败: %d"), games_won, games_lost);
+            // 您可以调整文本的位置、大小和颜色
+            drawChineseText(20, HEIGHT - 60, stats_text, 25, WHITE);
             break;
         }
         case SELECT_ZOMBIES: {
