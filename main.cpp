@@ -100,6 +100,7 @@ int main() {
     initgraph(WIDTH, HEIGHT); // 初始化图形窗口，设置大小为1280x720
     cleardevice();
     loadGameStats();
+    Zombie::LoadResources(); // 在游戏开始时加载所有僵尸图集
 
     // 设置文字显示样式
     LOGFONT font;
@@ -994,6 +995,7 @@ int main() {
         for (auto b : bullets) delete b; bullets.clear();
         NormalBullet::Cleanup(); 
         // 清理僵尸
+        Zombie::UnloadResources(); // 在游戏结束时卸载所有僵尸图集
         for (auto zombie : zombies) {
             delete zombie;
         }

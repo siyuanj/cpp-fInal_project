@@ -4,21 +4,50 @@
 #include <random>
 #include <algorithm> // 需要包含 <algorithm> 以使用 std::sort (如果需要排序) 或其他算法
 
-// 基础僵尸类实现
-Zombie::Zombie(int init_hp, int init_attack_power, POINT init_pos, double init_speed,
-    Atlas * atlas, int frame_interval, int atk_interval)
-    : hp(init_hp), max_hp(init_hp), attack_power(init_attack_power), position(init_pos),
-    speed(init_speed), is_alive(true), attack_interval(atk_interval), attack_timer(0),
-    target_plant(nullptr), target_brain(nullptr), attacking_brain(false) {
-    anim = new Animation(atlas, frame_interval);
-    // 默认向左移动
-    target_position = { 0, init_pos.y };
+Atlas* Zombie::atlas_normal_zombie = nullptr;
+Atlas* Zombie::atlas_elite_zombie = nullptr;
+Atlas* Zombie::atlas_cone_head_armor = nullptr;
+Atlas* Zombie::atlas_bucket_head_armor = nullptr;
+
+// 静态资源加载
+void Zombie::LoadResources() {
+    if (!atlas_normal_zombie) {
+        atlas_normal_zombie = new Atlas(_T("img/normal_zombies_%d.png"), 22);
+    }
+    if (!atlas_elite_zombie) {
+        atlas_elite_zombie = new Atlas(_T("img/elite_zombie_%d.png"), 23);
+    }
+    if (!atlas_cone_head_armor) {
+        atlas_cone_head_armor = new Atlas(_T("img/cone_head_zombie_%d.png"), 20);
+    }
+    if (!atlas_bucket_head_armor) {
+        atlas_bucket_head_armor = new Atlas(_T("img/bucket_head_zombie_%d.png"), 14);
+    }
 }
 
+// 静态资源卸载
+void Zombie::UnloadResources() {
+    delete atlas_normal_zombie;
+    atlas_normal_zombie = nullptr;
+    delete atlas_elite_zombie;
+    atlas_elite_zombie = nullptr;
+    delete atlas_cone_head_armor;
+    atlas_cone_head_armor = nullptr;
+    delete atlas_bucket_head_armor;
+    atlas_bucket_head_armor = nullptr;
+}
+
+// 基础僵尸类实现
+Zombie::Zombie(int init_hp, int init_attack_power, POINT init_pos, double init_speed, int atk_interval)
+    : hp(init_hp), max_hp(init_hp), attack_power(init_attack_power), position(init_pos),
+    speed(init_speed), is_alive(true), attack_interval(atk_interval), attack_timer(0),
+    target_plant(nullptr), target_brain(nullptr), attacking_brain(false), anim(nullptr) { // anim 初始化为 nullptr
+    //默认向左移动
+    target_position = { 0, init_pos.y };
+}
 Zombie::~Zombie() {
-    if (anim) {
-        delete anim;
-    }
+    delete anim; // anim 是每个实例独有的
+    anim = nullptr;
 }
 
 double Zombie::CalculateDistance(POINT p1, POINT p2) const {
@@ -179,62 +208,68 @@ void Zombie::TakeDamage(int damage) {
 }
 
 void Zombie::Draw() {
-    if (is_alive && anim) {
-        anim->showimage(position.x, position.y, 1000 / 144);
-    }
-    if (hp > 0 && max_hp > 0) { // 仅当存活且max_hp有效时绘制
-        const int health_bar_width = 60; // 血条总宽度 
-        const int health_bar_height = 8;  // 血条高度
-        const int health_bar_offset_y = 10; // 血条距离僵尸顶部的偏移量
 
-        int zombie_image_width = 160; // 假设僵尸图像平均宽度为80，具体值应根据实际图像调整
-        // 如果 Atlas 或 IMAGE 类提供了获取宽度的方法，可以使用它
-        // 例如: zombie_image_width = anim->getanim_atlas()->get_frame_width(); (假设有此方法)
-
-
-        // 血条背景位置
-        // 将血条居中显示在僵尸上方
-        int bar_bg_x = position.x + (zombie_image_width / 2) - (health_bar_width / 2);
-        int bar_bg_y = position.y - health_bar_offset_y - health_bar_height;
-
-        // 绘制血条背景 (例如，深灰色)
-        setfillcolor(RGB(80, 80, 80));
-        solidrectangle(bar_bg_x, bar_bg_y, bar_bg_x + health_bar_width, bar_bg_y + health_bar_height);
-
-        // 计算当前血量百分比和血条颜色
-        float health_percentage = static_cast<float>(hp) / max_hp;
-        int current_health_width = static_cast<int>(health_bar_width * health_percentage);
-
-        COLORREF health_color;
-        if (health_percentage > 0.66f) {
-            health_color = RGB(0, 255, 0); // 绿色
+    if (is_alive) {
+        if (anim) { // NormalZombie 和 EliteZombie 会使用这个
+            anim->showimage(position.x, position.y, 1000 / 144);
         }
-        else if (health_percentage > 0.33f) {
-            health_color = RGB(255, 255, 0); // 黄色
-        }
-        else {
-            health_color = RGB(255, 0, 0); // 红色
-        }
+        if (hp > 0 && max_hp > 0) { // 仅当存活且max_hp有效时绘制
+            const int health_bar_width = 60; // 血条总宽度 
+            const int health_bar_height = 8;  // 血条高度
+            const int health_bar_offset_y = 10; // 血条距离僵尸顶部的偏移量
 
-        // 绘制当前血量
-        setfillcolor(health_color);
-        solidrectangle(bar_bg_x, bar_bg_y, bar_bg_x + current_health_width, bar_bg_y + health_bar_height);
+            int zombie_image_width = 160; // 假设僵尸图像平均宽度为80，具体值应根据实际图像调整
+            // 如果 Atlas 或 IMAGE 类提供了获取宽度的方法，可以使用它
+            // 例如: zombie_image_width = anim->getanim_atlas()->get_frame_width(); (假设有此方法)
 
-        // 绘制血条边框
-        setlinecolor(BLACK);
-        rectangle(bar_bg_x, bar_bg_y, bar_bg_x + health_bar_width, bar_bg_y + health_bar_height);
+
+            // 血条背景位置
+            // 将血条居中显示在僵尸上方
+            int bar_bg_x = position.x + (zombie_image_width / 2) - (health_bar_width / 2);
+            int bar_bg_y = position.y - health_bar_offset_y - health_bar_height;
+
+            // 绘制血条背景 (例如，深灰色)
+            setfillcolor(RGB(80, 80, 80));
+            solidrectangle(bar_bg_x, bar_bg_y, bar_bg_x + health_bar_width, bar_bg_y + health_bar_height);
+
+            // 计算当前血量百分比和血条颜色
+            float health_percentage = static_cast<float>(hp) / max_hp;
+            int current_health_width = static_cast<int>(health_bar_width * health_percentage);
+
+            COLORREF health_color;
+            if (health_percentage > 0.66f) {
+                health_color = RGB(0, 255, 0); // 绿色
+            }
+            else if (health_percentage > 0.33f) {
+                health_color = RGB(255, 255, 0); // 黄色
+            }
+            else {
+                health_color = RGB(255, 0, 0); // 红色
+            }
+
+            // 绘制当前血量
+            setfillcolor(health_color);
+            solidrectangle(bar_bg_x, bar_bg_y, bar_bg_x + current_health_width, bar_bg_y + health_bar_height);
+
+            // 绘制血条边框
+            setlinecolor(BLACK);
+            rectangle(bar_bg_x, bar_bg_y, bar_bg_x + health_bar_width, bar_bg_y + health_bar_height);
+        }
     }
 }
 
 // 普通僵尸实现
 NormalZombie::NormalZombie(POINT init_pos)
-    : Zombie(150,                // 生命值
-        10,                  // 攻击力
+    : Zombie(150, 
+        10, 
         init_pos,
-        3,              // 速度提高到100
-        new Atlas(_T("img/normal_zombies_%d.png"), 22),
-        100,
-        1000) {
+        3.0,  //速度
+		1000) // 攻击间隔 (1000ms)
+{ 
+    // 基础属性
+    if (Zombie::atlas_normal_zombie) { // 确保图集已加载
+        anim = new Animation(Zombie::atlas_normal_zombie, 100); // 使用静态图集创建动画
+    }
 }
 
 // 精英僵尸实现
@@ -243,31 +278,31 @@ EliteZombie::EliteZombie(POINT init_pos)
         25,                  // 攻击力 (例如: 普通僵尸的2.5倍)
         init_pos,            // 初始位置
         3,                 // 移动速度 
-        new Atlas(_T("img/elite_zombie_%d.png"), 23), // 图像资源路径和帧数
-        100,                 // 动画帧间隔 (与普通僵尸一致)
         1000) {              // 攻击间隔 (与普通僵尸一致)
-    // EliteZombie 特有的初始化代码可以放在这里 (如果需要)
+    if (Zombie::atlas_elite_zombie) { // 确保图集已加载
+        anim = new Animation(Zombie::atlas_elite_zombie, 100); // 使用静态图集创建动画
+    }
 }
 
 // 有防具僵尸基类实现
 ArmoredZombie::ArmoredZombie(int init_hp, int armor_init_hp, POINT init_pos, double init_speed,
-    Atlas* zombie_atlas, Atlas* armor_atlas,
-    int frame_interval, int atk_interval)
-    : Zombie(init_hp, 10, init_pos, init_speed, zombie_atlas, frame_interval, atk_interval),
-    armor_hp(armor_init_hp),
-    max_armor_hp(armor_init_hp), // 初始化 max_armor_hp
-    has_armor(true) {
-    this->armor_atlas = armor_atlas;
-    armor_anim = new Animation(armor_atlas, frame_interval);
+    int atk_interval, Atlas* no_armor_atlas_param, Atlas* armor_atlas_param, int frame_interval)
+    : Zombie(init_hp, 10 /*基础攻击力*/, init_pos, init_speed, atk_interval),
+    armor_hp(armor_init_hp), max_armor_hp(armor_init_hp), has_armor(true), armor_anim(nullptr) {
+    if (no_armor_atlas_param) {
+        // 基类的 anim 使用无防具图集
+        this->anim = new Animation(no_armor_atlas_param, frame_interval);
+    }
+    if (armor_atlas_param) {
+        this->armor_anim = new Animation(armor_atlas_param, frame_interval);
+    }
 }
 
 ArmoredZombie::~ArmoredZombie() {
-    if (armor_anim) {
-        delete armor_anim;
-    }
-    if (armor_atlas) {
-        delete armor_atlas;
-    }
+    delete armor_anim; // armor_anim 是每个实例独有的
+    armor_anim = nullptr;
+    // 基类的 anim 会由 Zombie::~Zombie() 清理
+    // 静态的 Atlas 不在这里 delete
 }
 
 void ArmoredZombie::TakeDamage(int damage) {
@@ -366,10 +401,11 @@ ConeZombie::ConeZombie(POINT init_pos)
         80,
         init_pos,
         3.0,               // 速度提高到80
-        new Atlas(_T("img/normal_zombies_%d.png"), 22),
-        new Atlas(_T("img/cone_head_zombie_%d.png"), 20),
-        100,
-        1000) {
+		1000,              // 攻击间隔 (1000ms)
+        Zombie::atlas_normal_zombie,   // 无防具图集
+        Zombie::atlas_cone_head_armor, // 带防具图集
+        100
+        ) {
 }
 
 // 铁桶僵尸实现
@@ -378,10 +414,11 @@ BucketZombie::BucketZombie(POINT init_pos)
         150,
         init_pos,
         3.0,               // 速度提高到60
-        new Atlas(_T("img/normal_zombies_%d.png"), 22),
-        new Atlas(_T("img/bucket_head_zombie_%d.png"), 14),
-        100,
-        1000) {
+        1000,
+        Zombie::atlas_normal_zombie,    // 无防具图集
+        Zombie::atlas_bucket_head_armor, // 带防具图集
+        100
+        ) {
 }
 
 // ZombieSpawner实现

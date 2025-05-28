@@ -25,6 +25,7 @@ protected:
     int attack_interval;
     int attack_timer;
 
+
     // 攻击目标
     Plant* target_plant;
     BrainBase* target_brain;
@@ -40,12 +41,15 @@ public:
     static const int ZOMBIE_HEIGHT = 144;
 
     Zombie(int init_hp, int init_attack_power, POINT init_pos, double init_speed,
-           Atlas* atlas, int frame_interval, int atk_interval);
+            int atk_interval);
     virtual ~Zombie();
     virtual void Update(int delta, const std::vector<Plant*>& plants, BrainBase* brain);
     virtual void Draw();
     virtual void TakeDamage(int damage);
     virtual void Attack();
+
+    static void LoadResources();    // 一个统一的加载函数
+    static void UnloadResources();  // 一个统一的卸载函数
 
     // Getter函数
     bool IsAlive() const { return is_alive; }
@@ -54,6 +58,12 @@ public:
     double GetSpeed() const { return speed; }  // 添加获取速度的函数
     POINT GetTargetPosition() const { return target_position; }  // 添加获取目标位置的函数
     void SetTarget(POINT target) { target_position = target; }
+protected:
+    static Atlas* atlas_normal_zombie;
+    static Atlas* atlas_elite_zombie;
+    static Atlas* atlas_cone_head_armor; // 路障头盔的图集
+    static Atlas* atlas_bucket_head_armor; // 铁桶头盔的图集
+
 };
 
 // ZombieSpawner类 - 负责生成僵尸
@@ -65,6 +75,8 @@ private:
     int spawn_timer;                  // 生成计时器
     double spawn_chance;              // 生成概率
     std::mt19937 rng;                 // 随机数生成器
+    
+
 
 public:
     ZombieSpawner(const std::vector<POINT>& initial_spawn_positions, int base_interval = 1000, double chance = 0.3);
@@ -98,13 +110,14 @@ protected:
     int armor_hp;           // 防具血量
     int max_armor_hp;
     bool has_armor;         // 是否有防具
-    Atlas* armor_atlas;     // 带防具时的动画集
+    //Atlas* armor_atlas;     // 带防具时的动画集
     Animation* armor_anim;  // 带防具时的动画
 
 public:
-    ArmoredZombie(int init_hp, int armor_init_hp, POINT init_pos, double init_speed,
-                  Atlas* zombie_atlas, Atlas* armor_atlas,
-                  int frame_interval, int atk_interval);
+    ArmoredZombie(int init_hp, int armor_init_hp, 
+        POINT init_pos, double init_speed,
+        int atk_interval, Atlas* no_armor_atlas, 
+        Atlas* armor_atlas_param, int frame_interval);
     virtual ~ArmoredZombie();
     virtual void TakeDamage(int damage) override;
     virtual void Draw() override;
