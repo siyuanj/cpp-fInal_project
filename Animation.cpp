@@ -95,8 +95,7 @@ void Animation::showimage(int x, int y, int delta) {
     // 在访问frame_list之前，再次确认idx_frame是有效的
     if (idx_frame < anim_atlas->frame_list.size()) {
         putimage_alpha(x, y, anim_atlas->frame_list[idx_frame]);
-    }
-    else {
+    } else {
         // 这种情况理论上不应该发生，如果取模运算正确的话
         fprintf(stderr, "Error: idx_frame out of bounds in showimage.\n");
     }

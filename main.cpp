@@ -902,8 +902,11 @@ int main() {
             break;
         }
         case GAME_VICTORY: {
+            putimage_alpha(0, 0, backgroundAtlas->frame_list[0]);
             // 绘制游戏胜利界面
-            putimage_alpha(0, 0, victory_botton->frame_list[0]);
+            int buttonX = 390;
+            int buttonY = 110;
+            putimage_alpha(buttonX, buttonY, victory_botton->frame_list[0]);
             /*drawChineseText(WIDTH / 2 - 150, HEIGHT / 2 - 100, _T("游戏胜利!"), 70, GREEN);
             drawChineseText(WIDTH / 2 - 220, HEIGHT / 2 + 20, _T("恭喜你成功抵御了所有僵尸!"), 30, WHITE);
             drawChineseText(WIDTH / 2 - 150, HEIGHT / 2 + 70, _T("点击任意位置退出"), 25, YELLOW);*/
