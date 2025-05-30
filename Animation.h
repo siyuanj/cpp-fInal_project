@@ -13,6 +13,7 @@ public:
 
     // 单图加载构造函数
     Atlas(LPCTSTR path) {
+		// 重载函数，只加载一张图片
         IMAGE* picture = new IMAGE; // 创建IMAGE指针
         loadimage(picture, path); // 加载图片
         frame_list.push_back(picture); // 指针存入动态数组

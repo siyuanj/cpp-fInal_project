@@ -78,9 +78,7 @@ void Peashooter::Attack(Zombie* target_zombie, std::vector<Bullet*>& bullets) {
 
     // 2. 创建一颗新的子弹，并设置其追踪目标
     double bullet_speed = 100.0;
-    // 假设你的 Bullet 构造函数或一个设置目标的方法可以接收 Zombie*
-    // 你可能需要修改 Bullet 或 NormalBullet 的构造函数来接收 Zombie* target
-    // 或者添加一个 SetTarget(Zombie* target) 方法
+
     POINT tar_pos = target_zombie->GetPosition();
     tar_pos.x += 84;
     tar_pos.y += 84;

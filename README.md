@@ -99,3 +99,163 @@
   3. 将所有的 `.h` 和 `.cpp` 文件添加到您的项目中。
   4. 项目需要链接 `MSIMG32.LIB` 以支持 Alpha 透明混合功能 (`putimage_alpha`)，这通常由链接器自动处理。
   5. 编译并运行项目以开始游戏。一个包含所有必需图像资源的 `img` 文件夹必须与可执行文件位于同一目录中。
+
+
+
+
+
+```mermaid
+classDiagram
+    direction LR
+
+    class Plant {
+        <<Abstract>>
+        #hp: int
+        #max_hp: int
+        #position: POINT
+        #cost: int
+        #anim: Animation*
+        #is_alive: bool
+        +TakeDamage(int)
+        +Draw()*
+        +Update(int)*
+    }
+
+    class AttackPlant {
+        #attack_power: int
+        #attack_range: int
+        #attack_interval: int
+        +UpdateAttackLogic(int, vector~Zombie*~, vector~Bullet*~)
+        +Attack(Zombie*, vector~Bullet*~)*
+    }
+
+    class DefensePlant {
+        #defense: int
+        #is_priority: bool
+        +IsPriority(): bool
+    }
+
+    class ResourcePlant {
+        #resource_rate: int
+        #resource_amount: int
+        +GenerateResource()*
+    }
+
+    Plant <|-- AttackPlant
+    Plant <|-- DefensePlant
+    Plant <|-- ResourcePlant
+
+    class Peashooter {
+    }
+    class Repeater {
+    }
+    AttackPlant <|-- Peashooter
+    AttackPlant <|-- Repeater
+
+    class WallNut {
+    }
+    class TallWallNut {
+    }
+    DefensePlant <|-- WallNut
+    DefensePlant <|-- TallWallNut
+
+    class Sunflower {
+        -suns: vector~Sun*~
+    }
+    ResourcePlant <|-- Sunflower
+    Sunflower o--> Sun
+
+    class Zombie {
+        #hp: int
+        #attack_power: int
+        #position: POINT
+        #speed: double
+        #is_alive: bool
+        #target_plant: Plant*
+        #target_brain: BrainBase*
+        #FindNearestTarget(vector~Plant*~, BrainBase*)
+        +TakeDamage(int)
+        +Draw()
+        +Update(int, vector~Plant*~, BrainBase*)
+    }
+
+    class ArmoredZombie {
+        #armor_hp: int
+        #has_armor: bool
+    }
+    Zombie <|-- ArmoredZombie
+
+    class NormalZombie {
+    }
+    class EliteZombie {
+    }
+    Zombie <|-- NormalZombie
+    Zombie <|-- EliteZombie
+
+    class ConeZombie {
+    }
+    class BucketZombie {
+    }
+    ArmoredZombie <|-- ConeZombie
+    ArmoredZombie <|-- BucketZombie
+
+    class Bullet {
+        #position: POINT
+        #target_position: POINT
+        #speed: double
+        #is_active: bool
+        #damage_value: int
+        +Update(int)
+        +Draw()*
+    }
+    class NormalBullet{
+    }
+    Bullet <|-- NormalBullet
+
+    class Main {
+        -plants: vector~Plant*~
+        -zombies: vector~Zombie*~
+        -bullets: vector~Bullet*~
+        -tombstones: vector~tombstone*~
+        -brain: BrainBase*
+        -spawner: ZombieSpawner*
+        -gameState: GameState
+    }
+
+    Main o--> Plant
+    Main o--> Zombie
+    Main o--> Bullet
+    Main o--> BrainBase
+    Main o--> ZombieSpawner
+    Main o--> tombstone
+
+    ZombieSpawner o--> Zombie
+    AttackPlant ..> Bullet : creates
+    Zombie ..> Plant : attacks
+    Zombie ..> BrainBase : attacks
+
+    class Atlas {
+      +frame_list: vector~IMAGE*~
+    }
+    class Animation {
+      -anim_atlas: Atlas*
+      +showimage(int, int, int)
+    }
+    Animation o--> Atlas
+
+    Plant o--> Animation
+    Zombie o--> Animation
+
+    class BrainBase{
+        -hp: int
+        -position: POINT
+        +TakeDamage(int)
+    }
+    class Sun{
+        -position: POINT
+        -is_active: bool
+    }
+    class tombstone{
+        -position: POINT
+    }
+```
